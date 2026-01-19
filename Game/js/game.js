@@ -3,10 +3,17 @@
  * Game configurations.
  * @name configurations
  */
+const GAME_HEIGHT = 512
+const GAME_WIDTH = Math.max(
+    288,
+    Math.round(GAME_HEIGHT * (window.innerWidth / window.innerHeight))
+)
+const GAME_CENTER_X = GAME_WIDTH / 2
+
 const configurations = {
     type: Phaser.AUTO,
-    width: 288,
-    height: 512,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     parent: 'game-container',
     scale: {
         mode: Phaser.Scale.FIT,
@@ -51,7 +58,7 @@ const assets = {
         }
     },
     scene: {
-        width: 144,
+        width: GAME_CENTER_X,
         background: {
             day: 'background-day',
             night: 'background-night'
@@ -256,8 +263,10 @@ function preload() {
  */
 function create() {
     backgroundDay = this.add.image(assets.scene.width, 256, assets.scene.background.day).setInteractive()
+    backgroundDay.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
     backgroundDay.on('pointerdown', moveBird)
     backgroundNight = this.add.image(assets.scene.width, 256, assets.scene.background.night).setInteractive()
+    backgroundNight.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
     backgroundNight.visible = false
     backgroundNight.on('pointerdown', moveBird)
 
@@ -266,6 +275,8 @@ function create() {
     scoreboardGroup = this.physics.add.staticGroup()
 
     ground = this.physics.add.sprite(assets.scene.width, 458, assets.scene.ground)
+    ground.setDisplaySize(GAME_WIDTH, ground.height)
+    ground.body.setSize(ground.displayWidth, ground.displayHeight, true)
     ground.setCollideWorldBounds(true)
     ground.setDepth(10)
 
@@ -471,15 +482,15 @@ function makePipes(scene) {
 
     const pipeTopY = Phaser.Math.Between(-120, 120)
 
-    const gap = scene.add.line(288, pipeTopY + 210, 0, 0, 0, 98)
+    const gap = scene.add.line(GAME_WIDTH, pipeTopY + 210, 0, 0, 0, 98)
     gapsGroup.add(gap)
     gap.body.allowGravity = false
     gap.visible = false
 
-    const pipeTop = pipesGroup.create(288, pipeTopY, currentPipe.top)
+    const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
     pipeTop.body.allowGravity = false
 
-    const pipeBottom = pipesGroup.create(288, pipeTopY + 420, currentPipe.bottom)
+    const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + 420, currentPipe.bottom)
     pipeBottom.body.allowGravity = false
 }
 
