@@ -7,6 +7,11 @@ const configurations = {
     type: Phaser.AUTO,
     width: 288,
     height: 512,
+    parent: 'game-container',
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     physics: {
         default: 'arcade',
         arcade: {
@@ -113,7 +118,7 @@ let gameStarted
  * Up button component.
  * @type {object}
  */
-let upButton
+let selectButton
 /**
  * Restart button component.
  * @type {object}
@@ -268,7 +273,16 @@ function create() {
     messageInitial.setDepth(30)
     messageInitial.visible = false
 
-    upButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP)
+    selectButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+
+    // Ensure the canvas can receive key events on TV remotes.
+    if (this.game && this.game.canvas) {
+        this.game.canvas.setAttribute('tabindex', '0')
+        this.game.canvas.focus()
+        this.game.canvas.addEventListener('pointerdown', function () {
+            this.game.canvas.focus()
+        }.bind(this))
+    }
 
     // Ground animations
     this.anims.create({
@@ -362,12 +376,24 @@ function create() {
  *  Update the scene frame by frame, responsible for move and rotate the bird and to create and move the pipes.
  */
 function update() {
-    if (gameOver || !gameStarted)
+        const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
+    
+
+    if (gameOver) {
+        if (flapPressed)
+            restartGame()
         return
+    }
+
+    if (!gameStarted) {
+        if (flapPressed)
+            moveBird()
+        return
+    }
 
     if (framesMoveUp > 0)
         framesMoveUp--
-    else if (Phaser.Input.Keyboard.JustDown(upButton))
+    else if (flapPressed)
         moveBird()
     else {
         player.setVelocityY(120)
