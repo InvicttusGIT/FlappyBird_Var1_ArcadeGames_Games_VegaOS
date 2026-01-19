@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "Basic UI React Native Application for project vegashell"
+title = "FlappyBird"
 version = "0.1.0"
 id = "com.invicttusx.flappybird"
 
@@ -11,3 +11,27 @@ id = "com.invicttusx.flappybird.main"
 runtime-module = "/com.amazon.kepler.keplerscript.runtime.loader_2@IKeplerScript_2_0"
 launch-type = "singleton"
 categories = ["com.amazon.category.main"]
+
+[wants]
+
+# Web renderer service for rendering web content
+[[wants.service]]
+id = "com.amazon.webview.renderer_service"
+
+# If Web App needs keyboard support
+[[wants.service]]
+id = "com.amazon.inputmethod.service"
+
+
+# If Web App needs audio playback
+[[wants.service]]
+id = "com.amazon.audio.stream"
+
+# Required for audio management features to work in WebView, features like audio focus, volume control 
+[[wants.service]]
+id = "com.amazon.audio.control"
+
+# To enable accessibility support for your app, it's highly recommended you add UCC service with Service Registrar
+[[wants.service]]
+id = "com.amazon.kepler.ucc.publisher"
+
