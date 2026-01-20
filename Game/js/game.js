@@ -23,7 +23,7 @@ const configurations = {
         default: 'arcade',
         arcade: {
             gravity: {
-                y: 300
+                y: 500
             },
             debug: false
         }
@@ -172,7 +172,8 @@ let backgroundNight
  * Ground component.
  * @type {object}
  */
-let ground
+let groundCollider
+let groundSprites
 // pipes
 /**
  * Pipes group component.
@@ -274,11 +275,28 @@ function create() {
     pipesGroup = this.physics.add.group()
     scoreboardGroup = this.physics.add.staticGroup()
 
-    ground = this.physics.add.sprite(assets.scene.width, 458, assets.scene.ground)
-    ground.setDisplaySize(GAME_WIDTH, ground.height)
-    ground.body.setSize(ground.displayWidth, ground.displayHeight, true)
-    ground.setCollideWorldBounds(true)
-    ground.setDepth(10)
+    const groundY = 458
+    const groundFrameWidth = 336
+    const groundCount = Math.ceil(GAME_WIDTH / groundFrameWidth) + 1
+    const groundStartX = groundFrameWidth / 2
+
+    groundSprites = []
+    for (let i = 0; i < groundCount; i++) {
+        const groundSprite = this.add.sprite(
+            groundStartX + (i * groundFrameWidth),
+            groundY,
+            assets.scene.ground
+        )
+        groundSprite.setDepth(10)
+        groundSprites.push(groundSprite)
+    }
+
+    groundCollider = this.physics.add.sprite(GAME_WIDTH / 2, groundY, assets.scene.ground)
+    groundCollider.setVisible(false)
+    groundCollider.setDisplaySize(GAME_WIDTH, groundCollider.height)
+    groundCollider.body.setSize(groundCollider.displayWidth, groundCollider.displayHeight, true)
+    groundCollider.body.allowGravity = false
+    groundCollider.setImmovable(true)
 
     messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
     messageInitial.setDepth(30)
@@ -404,23 +422,27 @@ function update() {
 
     if (framesMoveUp > 0)
         framesMoveUp--
-    else if (flapPressed)
+    else 
+    if (flapPressed)
         moveBird()
     else {
         player.setVelocityY(120)
 
         if (player.angle < 90)
-            player.angle += 1
+            player.angle += 1.25
     }
 
     pipesGroup.children.iterate(function (child) {
         if (child == undefined)
             return
 
+
+
         if (child.x < -50)
             child.destroy()
         else
             child.setVelocityX(-100)
+
     })
 
     gapsGroup.children.iterate(function (child) {
@@ -445,7 +467,9 @@ function hitBird(player) {
     gameStarted = false
 
     player.anims.play(getAnimationBird(birdName).stop)
-    ground.anims.play(assets.animation.ground.stop)
+    groundSprites.forEach(function (sprite) {
+        sprite.anims.play(assets.animation.ground.stop)
+    })
 
     gameOverBanner.visible = true
     restartButton.visible = true
@@ -468,6 +492,15 @@ function updateScore(_, gap) {
             currentPipe = assets.obstacle.pipe.red
         else
             currentPipe = assets.obstacle.pipe.green
+
+        pipesGroup.children.iterate(function (child) {
+            if (!child)
+                return
+            if (child.texture && child.texture.key === assets.obstacle.pipe.green.top || child.texture.key === assets.obstacle.pipe.red.top)
+                child.setTexture(currentPipe.top)
+            else if (child.texture && child.texture.key === assets.obstacle.pipe.green.bottom || child.texture.key === assets.obstacle.pipe.red.bottom)
+                child.setTexture(currentPipe.bottom)
+        })
     }
 
     updateScoreboard()
@@ -505,7 +538,7 @@ function moveBird() {
         startGame(game.scene.scenes[0])
 
     player.setVelocityY(-400)
-    player.angle = -15
+    player.angle = -20
     framesMoveUp = 5
 }
 
@@ -600,12 +633,14 @@ function prepareGame(scene) {
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
 
-    scene.physics.add.collider(player, ground, hitBird, null, scene)
+    scene.physics.add.collider(player, groundCollider, hitBird, null, scene)
     scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
-    ground.anims.play(assets.animation.ground.moving, true)
+    groundSprites.forEach(function (sprite) {
+        sprite.anims.play(assets.animation.ground.moving, true)
+    })
 }
 
 /**
