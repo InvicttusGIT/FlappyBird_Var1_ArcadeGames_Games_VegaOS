@@ -167,7 +167,7 @@ let backgroundNight
  * @type {object}
  */
 let groundCollider
-let groundSprites
+let groundSprite
 // pipes
 /**
  * Pipes group component.
@@ -210,6 +210,16 @@ const minVelocity = 50
  */
 let currentVelocity = minVelocity
 /**
+ * Background parallax speed (pixels per second).
+ * @type {number}
+ */
+const backgroundScrollSpeed = 20
+/**
+ * Ground parallax speed (pixels per second).
+ * @type {number}
+ */
+const groundScrollSpeed = 100
+/**
  * Debug text for dt / fps.
  * @type {object}
  */
@@ -223,10 +233,7 @@ function preload() {
     // Backgrounds and ground
     this.load.image(assets.scene.background.day, 'assets/background-day.png')
     this.load.image(assets.scene.background.night, 'assets/background-night.png')
-    this.load.spritesheet(assets.scene.ground, 'assets/ground-sprite.png', {
-        frameWidth: 336,
-        frameHeight: 112
-    })
+    this.load.image(assets.scene.ground, 'assets/ground-sprite.png')
 
     // Pipes
     this.load.image(assets.obstacle.pipe.green.top, 'assets/pipe-green-top.png')
@@ -272,11 +279,9 @@ function preload() {
  *   Create the game objects (images, groups, sprites and animations).
  */
 function create() {
-    backgroundDay = this.add.image(assets.scene.width, 256, assets.scene.background.day).setInteractive()
-    backgroundDay.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+    backgroundDay = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.day).setInteractive()
     backgroundDay.on('pointerdown', moveBird)
-    backgroundNight = this.add.image(assets.scene.width, 256, assets.scene.background.night).setInteractive()
-    backgroundNight.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+    backgroundNight = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.night).setInteractive()
     backgroundNight.visible = false
     backgroundNight.on('pointerdown', moveBird)
 
@@ -285,27 +290,12 @@ function create() {
     scoreboardGroup = this.physics.add.staticGroup()
 
     const groundY = 458
-    const groundFrameWidth = 336
-    const groundCount = Math.ceil(GAME_WIDTH / groundFrameWidth) + 1
-    const groundStartX = groundFrameWidth / 2
+    groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
+    groundSprite.setDepth(10)
 
-    groundSprites = []
-    for (let i = 0; i < groundCount; i++) {
-        const groundSprite = this.add.sprite(
-            groundStartX + (i * groundFrameWidth),
-            groundY,
-            assets.scene.ground
-        )
-        groundSprite.setDepth(10)
-        groundSprites.push(groundSprite)
-    }
-
-    groundCollider = this.physics.add.sprite(GAME_WIDTH / 2, groundY, assets.scene.ground)
+    groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground)
     groundCollider.setVisible(false)
-    groundCollider.setDisplaySize(GAME_WIDTH, groundCollider.height)
-    groundCollider.body.setSize(groundCollider.displayWidth, groundCollider.displayHeight, true)
-    groundCollider.body.allowGravity = false
-    groundCollider.setImmovable(true)
+    groundCollider.setSize(GAME_WIDTH, 112, true)
 
     messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
     messageInitial.setDepth(30)
@@ -328,25 +318,6 @@ function create() {
             this.game.canvas.focus()
         }.bind(this))
     }
-
-    // Ground animations
-    this.anims.create({
-        key: assets.animation.ground.moving,
-        frames: this.anims.generateFrameNumbers(assets.scene.ground, {
-            start: 0,
-            end: 2
-        }),
-        frameRate: 15,
-        repeat: -1
-    })
-    this.anims.create({
-        key: assets.animation.ground.stop,
-        frames: [{
-            key: assets.scene.ground,
-            frame: 0
-        }],
-        frameRate: 20
-    })
 
     // Red Bird Animations
     this.anims.create({
@@ -423,11 +394,22 @@ function create() {
 function update(t, dt) {
     const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
     
-    if (debugText) {
-        const fps = dt > 0 ? (1000 / dt).toFixed(1) : '0'
-        debugText.setText(`dt: ${dt.toFixed(1)} ms (${fps} fps)`)
-    }
+    const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
 
+    if (debugText) {
+        const fps = deltaMs > 0 ? (1000 / deltaMs).toFixed(1) : '0'
+        debugText.setText(`dt: ${deltaMs.toFixed(1)} ms (${fps} fps)`)
+    }
+    //background image parallax effect
+    if (!gameOver) {
+    const parallaxDeltaBg = backgroundScrollSpeed * (deltaMs / 1000)
+    if (backgroundDay.visible)
+        backgroundDay.tilePositionX += parallaxDeltaBg
+    if (backgroundNight.visible)
+        backgroundNight.tilePositionX += parallaxDeltaBg
+    if (!gameOver)
+        groundSprite.tilePositionX += groundScrollSpeed * (deltaMs / 1000)
+    }
     if (gameOver) {
         if (flapPressed)
             restartGame()
@@ -446,7 +428,7 @@ function update(t, dt) {
     if (flapPressed )
         moveBird()
     else {
-        currentVelocity += 1500 * (dt / 1000)
+        currentVelocity += 1500 * (deltaMs / 1000)
 
         if (currentVelocity > maxVelocity) {
             currentVelocity = maxVelocity
@@ -494,9 +476,6 @@ function hitBird(player) {
     gameStarted = false
 
     player.anims.play(getAnimationBird(birdName).stop)
-    groundSprites.forEach(function (sprite) {
-        sprite.anims.play(assets.animation.ground.stop)
-    })
 
     gameOverBanner.visible = true
     restartButton.visible = true
@@ -652,6 +631,7 @@ function prepareGame(scene) {
     nextPipes = 0
     currentPipe = assets.obstacle.pipe.green
     score = 0
+    currentVelocity = minVelocity
     gameOver = false
     backgroundDay.visible = true
     backgroundNight.visible = false
@@ -668,9 +648,6 @@ function prepareGame(scene) {
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
-    groundSprites.forEach(function (sprite) {
-        sprite.anims.play(assets.animation.ground.moving, true)
-    })
 }
 
 /**
@@ -680,6 +657,8 @@ function prepareGame(scene) {
 function startGame(scene) {
     gameStarted = true
     messageInitial.visible = false
+
+    player.body.allowGravity = true
 
     const score0 = scoreboardGroup.create(assets.scene.width, 30, assets.scoreboard.number0)
     score0.setDepth(20)
