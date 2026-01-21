@@ -21,12 +21,6 @@ const configurations = {
     },
     physics: {
         default: 'arcade',
-        arcade: {
-            gravity: {
-                y: 500
-            },
-            debug: false
-        }
     },
     scene: {
         preload: preload,
@@ -207,6 +201,21 @@ let scoreboardGroup
  */
 let score
 
+
+const maxVelocity = 500
+const minVelocity = 50
+/**
+ * Current velocity of the bird.
+ * @type {number}
+ */
+let currentVelocity = minVelocity
+/**
+ * Debug text for dt / fps.
+ * @type {object}
+ */
+let debugText
+
+
 /**
  *   Load the game assets.
  */
@@ -303,6 +312,13 @@ function create() {
     messageInitial.visible = false
 
     selectButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+
+    debugText = this.add.text(4, 4, 'dt: 0 ms', {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: '#00ff00'
+    })
+    debugText.setDepth(50)
 
     // Ensure the canvas can receive key events on TV remotes.
     if (this.game && this.game.canvas) {
@@ -404,9 +420,13 @@ function create() {
 /**
  *  Update the scene frame by frame, responsible for move and rotate the bird and to create and move the pipes.
  */
-function update() {
-        const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
+function update(t, dt) {
+    const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
     
+    if (debugText) {
+        const fps = dt > 0 ? (1000 / dt).toFixed(1) : '0'
+        debugText.setText(`dt: ${dt.toFixed(1)} ms (${fps} fps)`)
+    }
 
     if (gameOver) {
         if (flapPressed)
@@ -423,13 +443,20 @@ function update() {
     if (framesMoveUp > 0)
         framesMoveUp--
     else 
-    if (flapPressed)
+    if (flapPressed )
         moveBird()
     else {
-        player.setVelocityY(120)
+        currentVelocity += 1500 * (dt / 1000)
 
-        if (player.angle < 90)
+        if (currentVelocity > maxVelocity) {
+            currentVelocity = maxVelocity
+        }
+        player.setVelocityY(currentVelocity);
+
+        if (player.angle < 90 && currentVelocity > 0)
+        {
             player.angle += 1.25
+        }
     }
 
     pipesGroup.children.iterate(function (child) {
@@ -537,7 +564,10 @@ function moveBird() {
     if (!gameStarted)
         startGame(game.scene.scenes[0])
 
-    player.setVelocityY(-400)
+    
+    currentVelocity = -200
+    //currentVelocity = minVelocity
+    player.setVelocityY(currentVelocity)
     player.angle = -20
     framesMoveUp = 5
 }
