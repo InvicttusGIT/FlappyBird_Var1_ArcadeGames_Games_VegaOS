@@ -191,6 +191,11 @@ let gapsGroup
  */
 let nextPipes
 /**
+ * Target frame count for next pipe set spawn.
+ * @type {number}
+ */
+let nextPipeSpawnFrame
+/**
  * Current pipe asset.
  * @type {object}
  */
@@ -225,6 +230,18 @@ const backgroundScrollSpeed = 20
  * @type {number}
  */
 const groundScrollSpeed = 100
+/**
+ * Vertical gap between top and bottom pipes in a set (pixels).
+ * @type {object}
+ */
+const verticalPipeGapMin = 380
+const verticalPipeGapMax = 460
+/**
+ * Horizontal spacing between pipe sets (frames).
+ * @type {object}
+ */
+const horizontalPipeSetGapMin = 110
+const horizontalPipeSetGapMax = 150
 /**
  * Debug text for dt / fps.
  * @type {object}
@@ -503,9 +520,10 @@ function update(t, dt) {
     })
 
     nextPipes++
-    if (nextPipes === 130) {
+    if (nextPipes >= nextPipeSpawnFrame) {
         makePipes(game.scene.scenes[0])
         nextPipes = 0
+        nextPipeSpawnFrame = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
     }
 }
 
@@ -563,8 +581,10 @@ function makePipes(scene) {
     if (!gameStarted || gameOver) return
 
     const pipeTopY = Phaser.Math.Between(-120, 120)
+    const verticalGap = getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
 
-    const gap = scene.add.line(GAME_WIDTH, pipeTopY + 210, 0, 0, 0, 98)
+    const gapCenterY = pipeTopY + (verticalGap / 2)
+    const gap = scene.add.line(GAME_WIDTH, gapCenterY, 0, 0, 0, 98)
     gapsGroup.add(gap)
     gap.body.allowGravity = false
     gap.visible = false
@@ -574,7 +594,7 @@ function makePipes(scene) {
 
     pipeTop.body.allowGravity = false
 
-    const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + 420, currentPipe.bottom)
+    const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + verticalGap, currentPipe.bottom)
     pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height-5 )
     pipeBottom.body.allowGravity = false
 }
@@ -675,6 +695,7 @@ function restartGame() {
 function prepareGame(scene) {
     framesMoveUp = 0
     nextPipes = 0
+    nextPipeSpawnFrame = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
     currentPipe = assets.obstacle.pipe.green
     score = 0
     currentVelocity = minVelocity
@@ -712,3 +733,21 @@ function startGame(scene) {
 
     makePipes(scene)
 }
+
+/**
+ * Generate a random value between min and max (inclusive).
+ * @param {number} min - Minimum value.
+ * @param {number} max - Maximum value.
+ * @return {number} Random value between min and max.
+ */
+function getRandomBetween(min, max) {
+    // Ensure min is less than or equal to max, swap if needed.
+  if (min > max) {
+    [min, max] = [max, min];
+  }
+  // Make min and max integers for the integer generation logic.
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  // The maximum is inclusive and the minimum is inclusive
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
