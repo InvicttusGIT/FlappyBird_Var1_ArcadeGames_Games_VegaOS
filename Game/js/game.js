@@ -21,6 +21,12 @@ const configurations = {
     },
     physics: {
         default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: true, // Enable debug mode here
+            debugShowBody: true, // Specific option to show collision boxes
+            debugShowVelocity: true // Shows direction of movement
+        }
     },
     scene: {
         preload: preload,
@@ -224,12 +230,50 @@ const groundScrollSpeed = 100
  * @type {object}
  */
 let debugText
+/**
+ * Back button handler flag.
+ * @type {boolean}
+ */
+let backHandlerAttached = false
+/**
+ * Loader visuals.
+ * @type {object}
+ */
+let loadingText
+let loadingBarBg
+let loadingBarFill
 
 
 /**
  *   Load the game assets.
  */
 function preload() {
+    const cam = this.cameras.main
+    const barWidth = GAME_WIDTH * 0.6
+    const barHeight = 12
+    const barX = (GAME_WIDTH - barWidth) / 2
+    const barY = cam.centerY
+
+    loadingText = this.add.text(cam.centerX, barY - 30, 'Loading... 0%', {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: '#00ff00'
+    }).setOrigin(0.5, 0.5)
+
+    loadingBarBg = this.add.rectangle(barX, barY, barWidth, barHeight, 0x444444).setOrigin(0, 0.5)
+    loadingBarFill = this.add.rectangle(barX, barY, 1, barHeight, 0x00ff00).setOrigin(0, 0.5)
+
+    this.load.on('progress', (value) => {
+        loadingBarFill.width = Math.max(1, barWidth * value)
+        loadingText.setText(`Loading... ${(value * 100).toFixed(0)}%`)
+    })
+
+    this.load.on('complete', () => {
+        loadingText.destroy()
+        loadingBarBg.destroy()
+        loadingBarFill.destroy()
+    })
+
     // Backgrounds and ground
     this.load.image(assets.scene.background.day, 'assets/background-day.png')
     this.load.image(assets.scene.background.night, 'assets/background-night.png')
@@ -471,7 +515,6 @@ function update(t, dt) {
  */
 function hitBird(player) {
     this.physics.pause()
-
     gameOver = true
     gameStarted = false
 
@@ -527,9 +570,12 @@ function makePipes(scene) {
     gap.visible = false
 
     const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
+    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height)
+
     pipeTop.body.allowGravity = false
 
     const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + 420, currentPipe.bottom)
+    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height)
     pipeBottom.body.allowGravity = false
 }
 
@@ -638,7 +684,8 @@ function prepareGame(scene) {
     messageInitial.visible = true
 
     birdName = getRandomBird()
-    player = scene.physics.add.sprite(60, 265, birdName)
+    player = scene.physics.add.sprite(100, 250, birdName)
+    player.body.setSize(25,20)
     player.setCollideWorldBounds(true)
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
