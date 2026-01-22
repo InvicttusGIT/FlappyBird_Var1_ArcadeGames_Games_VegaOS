@@ -570,12 +570,12 @@ function makePipes(scene) {
     gap.visible = false
 
     const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
-    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height)
+    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height-5)
 
     pipeTop.body.allowGravity = false
 
     const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + 420, currentPipe.bottom)
-    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height)
+    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height-5 )
     pipeBottom.body.allowGravity = false
 }
 
