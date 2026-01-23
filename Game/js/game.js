@@ -186,15 +186,15 @@ let pipesGroup
  */
 let gapsGroup
 /**
- * Counter till next pipes to be created.
+ * Horizontal travel distance accumulated since last pipe spawn (pixels).
  * @type {number}
  */
-let nextPipes
+let pipeTravelDistanceSinceLast
 /**
- * Target frame count for next pipe set spawn.
+ * Target horizontal travel distance to next pipe set (pixels).
  * @type {number}
  */
-let nextPipeSpawnFrame
+let nextPipeSpawnDistance
 /**
  * Current pipe asset.
  * @type {object}
@@ -225,11 +225,7 @@ let currentVelocity = minVelocity
  * @type {number}
  */
 const backgroundScrollSpeed = 20
-/**
- * Ground parallax speed (pixels per second).
- * @type {number}
- */
-const groundScrollSpeed = 100
+
 /**
  * Vertical gap between top and bottom pipes in a set (pixels).
  * @type {object}
@@ -240,8 +236,8 @@ const verticalPipeGapMax = 460
  * Horizontal spacing between pipe sets (frames).
  * @type {object}
  */
-const horizontalPipeSetGapMin = 110
-const horizontalPipeSetGapMax = 150
+const horizontalPipeSetGapMin = 160
+const horizontalPipeSetGapMax = 250
 /**
  * Debug text for dt / fps.
  * @type {object}
@@ -260,6 +256,7 @@ let loadingText
 let loadingBarBg
 let loadingBarFill
 
+const gameSpeed = 100
 
 /**
  *   Load the game assets.
@@ -469,7 +466,7 @@ function update(t, dt) {
     if (backgroundNight.visible)
         backgroundNight.tilePositionX += parallaxDeltaBg
     if (!gameOver)
-        groundSprite.tilePositionX += groundScrollSpeed * (deltaMs / 1000)
+        groundSprite.tilePositionX += gameSpeed * (deltaMs / 1000)
     }
     if (gameOver) {
         if (flapPressed)
@@ -498,7 +495,7 @@ function update(t, dt) {
 
         if (player.angle < 90 && currentVelocity > 0)
         {
-            player.angle += 1.25
+            player.angle += 1.75
         }
     }
 
@@ -511,19 +508,19 @@ function update(t, dt) {
         if (child.x < -50)
             child.destroy()
         else
-            child.setVelocityX(-100)
+            child.setVelocityX(-gameSpeed)
 
     })
 
     gapsGroup.children.iterate(function (child) {
-        child.body.setVelocityX(-100)
+        child.body.setVelocityX(-gameSpeed)
     })
-
-    nextPipes++
-    if (nextPipes >= nextPipeSpawnFrame) {
+    
+    pipeTravelDistanceSinceLast += gameSpeed * (deltaMs / 1000)
+    if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
         makePipes(game.scene.scenes[0])
-        nextPipes = 0
-        nextPipeSpawnFrame = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+        pipeTravelDistanceSinceLast = 0
+        nextPipeSpawnDistance = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
     }
 }
 
@@ -584,9 +581,11 @@ function makePipes(scene) {
     const verticalGap = getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
 
     const gapCenterY = pipeTopY + (verticalGap / 2)
-    const gap = scene.add.line(GAME_WIDTH, gapCenterY, 0, 0, 0, 98)
+    const gapLineHeight = verticalGap
+    const gap = scene.add.line(GAME_WIDTH, gapCenterY, 0, -gapLineHeight / 2, 0, gapLineHeight / 2)
     gapsGroup.add(gap)
     gap.body.allowGravity = false
+    gap.body.setSize(1, gapLineHeight, true)
     gap.visible = false
 
     const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
@@ -694,8 +693,8 @@ function restartGame() {
  */
 function prepareGame(scene) {
     framesMoveUp = 0
-    nextPipes = 0
-    nextPipeSpawnFrame = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+    pipeTravelDistanceSinceLast = 0
+    nextPipeSpawnDistance = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
     currentPipe = assets.obstacle.pipe.green
     score = 0
     currentVelocity = minVelocity
