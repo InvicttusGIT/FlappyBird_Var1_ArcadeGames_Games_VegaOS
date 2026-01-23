@@ -230,8 +230,8 @@ const backgroundScrollSpeed = 20
  * Vertical gap between top and bottom pipes in a set (pixels).
  * @type {object}
  */
-const verticalPipeGapMin = 380
-const verticalPipeGapMax = 460
+const verticalPipeGapMin = 400
+const verticalPipeGapMax = 480
 /**
  * Horizontal spacing between pipe sets (frames).
  * @type {object}
@@ -259,7 +259,7 @@ let loadingBarFill
 const gameSpeed = 100
 
 const upwardVelocity = -250
-
+const gravity = 1500   //pixels per frame
 /**
  *   Load the game assets.
  */
@@ -488,7 +488,7 @@ function update(t, dt) {
     if (flapPressed )
         moveBird()
     else {
-        currentVelocity += 1500 * (deltaMs / 1000)
+        currentVelocity += gravity * (deltaMs / 1000)
 
         if (currentVelocity > maxVelocity) {
             currentVelocity = maxVelocity
