@@ -258,6 +258,8 @@ let loadingBarFill
 
 const gameSpeed = 100
 
+const upwardVelocity = -250
+
 /**
  *   Load the game assets.
  */
@@ -609,7 +611,7 @@ function moveBird() {
         startGame(game.scene.scenes[0])
 
     
-    currentVelocity = -200
+    currentVelocity = upwardVelocity
     //currentVelocity = minVelocity
     player.setVelocityY(currentVelocity)
     player.angle = -20
