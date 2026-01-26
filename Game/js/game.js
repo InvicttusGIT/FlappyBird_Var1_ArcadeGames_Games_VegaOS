@@ -237,7 +237,17 @@ const verticalPipeGapMax = 480
  * @type {object}
  */
 const horizontalPipeSetGapMin = 160
-const horizontalPipeSetGapMax = 250
+const horizontalPipeSetGapMax = 300
+/**
+ * Score threshold to advance a level.
+ * @type {number}
+ */
+const scoreToChangeLevel = 5
+/**
+ * Theme toggle flag (true = day/green pipes, false = night/red pipes).
+ * @type {boolean}
+ */
+let isDayTheme = true
 /**
  * Debug text for dt / fps.
  * @type {object}
@@ -256,7 +266,12 @@ let loadingText
 let loadingBarBg
 let loadingBarFill
 
-const gameSpeed = 100
+const minGameSpeed = 100
+const maxGameSpeed = 250
+const gameSpeedIncrement = 20
+let currentGameSpeed = minGameSpeed
+
+
 
 const upwardVelocity = -250
 const gravity = 1500   //pixels per frame
@@ -468,7 +483,7 @@ function update(t, dt) {
     if (backgroundNight.visible)
         backgroundNight.tilePositionX += parallaxDeltaBg
     if (!gameOver)
-        groundSprite.tilePositionX += gameSpeed * (deltaMs / 1000)
+        groundSprite.tilePositionX += currentGameSpeed * (deltaMs / 1000)
     }
     if (gameOver) {
         if (flapPressed)
@@ -510,15 +525,15 @@ function update(t, dt) {
         if (child.x < -50)
             child.destroy()
         else
-            child.setVelocityX(-gameSpeed)
+            child.setVelocityX(-currentGameSpeed)
 
     })
 
     gapsGroup.children.iterate(function (child) {
-        child.body.setVelocityX(-gameSpeed)
+        child.body.setVelocityX(-currentGameSpeed)
     })
     
-    pipeTravelDistanceSinceLast += gameSpeed * (deltaMs / 1000)
+    pipeTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
     if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
         makePipes(game.scene.scenes[0])
         pipeTravelDistanceSinceLast = 0
@@ -550,26 +565,35 @@ function updateScore(_, gap) {
     score++
     gap.destroy()
 
-    if (score % 10 == 0) {
-        backgroundDay.visible = !backgroundDay.visible
-        backgroundNight.visible = !backgroundNight.visible
-
-        if (currentPipe === assets.obstacle.pipe.green)
-            currentPipe = assets.obstacle.pipe.red
-        else
-            currentPipe = assets.obstacle.pipe.green
-
-        pipesGroup.children.iterate(function (child) {
-            if (!child)
-                return
-            if (child.texture && child.texture.key === assets.obstacle.pipe.green.top || child.texture.key === assets.obstacle.pipe.red.top)
-                child.setTexture(currentPipe.top)
-            else if (child.texture && child.texture.key === assets.obstacle.pipe.green.bottom || child.texture.key === assets.obstacle.pipe.red.bottom)
-                child.setTexture(currentPipe.bottom)
-        })
-    }
+    if (score > 0 && score % scoreToChangeLevel === 0)
+        advanceLevel()
 
     updateScoreboard()
+}
+
+function advanceLevel() {
+    toggleThemeAndPipes()
+    currentGameSpeed = Math.min(maxGameSpeed, currentGameSpeed + gameSpeedIncrement)
+    console.log('currentGameSpeed', currentGameSpeed);
+    
+}
+
+function toggleThemeAndPipes() {
+    isDayTheme = !isDayTheme
+
+    backgroundDay.visible = isDayTheme
+    backgroundNight.visible = !isDayTheme
+
+    currentPipe = isDayTheme ? assets.obstacle.pipe.green : assets.obstacle.pipe.red
+
+    pipesGroup.children.iterate(function (child) {
+        if (!child)
+            return
+        if (child.texture && (child.texture.key === assets.obstacle.pipe.green.top || child.texture.key === assets.obstacle.pipe.red.top))
+            child.setTexture(currentPipe.top)
+        else if (child.texture && (child.texture.key === assets.obstacle.pipe.green.bottom || child.texture.key === assets.obstacle.pipe.red.bottom))
+            child.setTexture(currentPipe.bottom)
+    })
 }
 
 /**
@@ -697,12 +721,13 @@ function prepareGame(scene) {
     framesMoveUp = 0
     pipeTravelDistanceSinceLast = 0
     nextPipeSpawnDistance = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+    isDayTheme = true
     currentPipe = assets.obstacle.pipe.green
     score = 0
     currentVelocity = minVelocity
     gameOver = false
-    backgroundDay.visible = true
-    backgroundNight.visible = false
+    backgroundDay.visible = isDayTheme
+    backgroundNight.visible = !isDayTheme
     messageInitial.visible = true
 
     birdName = getRandomBird()
