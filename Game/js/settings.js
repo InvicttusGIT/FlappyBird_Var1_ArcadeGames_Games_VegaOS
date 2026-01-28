@@ -26,5 +26,5 @@ const gameSpeedIncrement = 20
 const upwardVelocity = -250
 const gravity = 1500   // pixels per second^2
 
-const gameOverShakeDurationMs = 200
-const gameOverShakeIntensity = 0.005
+const gameOverShakeDurationMs = 300
+const gameOverShakeIntensity = 0.010
