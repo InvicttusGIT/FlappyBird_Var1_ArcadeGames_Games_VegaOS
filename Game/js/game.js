@@ -262,7 +262,7 @@ function update(t, dt) {
     if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
         makePipes(game.scene.scenes[0])
         pipeTravelDistanceSinceLast = 0
-        nextPipeSpawnDistance = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+        nextPipeSpawnDistance = getHorizontalPipeSetGap()
     }
 }
 
@@ -298,9 +298,6 @@ function updateScore(_, gap) {
 
 function advanceLevel() {
     toggleThemeAndPipes()
-    currentGameSpeed = Math.min(maxGameSpeed, currentGameSpeed + gameSpeedIncrement)
-    console.log('currentGameSpeed', currentGameSpeed);
-    
 }
 
 function toggleThemeAndPipes() {
@@ -321,6 +318,18 @@ function toggleThemeAndPipes() {
     })
 }
 
+function getVerticalPipeGap() {
+    if (useRandomPipeGaps)
+        return getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
+    return fixedVerticalPipeGap
+}
+
+function getHorizontalPipeSetGap() {
+    if (useRandomPipeGaps)
+        return getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+    return fixedHorizontalPipeSetGap
+}
+
 /**
  * Create pipes and gap in the game.
  * @param {object} scene - Game scene.
@@ -329,7 +338,7 @@ function makePipes(scene) {
     if (!gameStarted || gameOver) return
 
     const pipeTopY = Phaser.Math.Between(-120, 120)
-    const verticalGap = getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
+    const verticalGap = getVerticalPipeGap()
 
     const gapCenterY = pipeTopY + (verticalGap / 2)
     const gapLineHeight = verticalGap
@@ -445,7 +454,7 @@ function restartGame() {
 function prepareGame(scene) {
     framesMoveUp = 0
     pipeTravelDistanceSinceLast = 0
-    nextPipeSpawnDistance = getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+    nextPipeSpawnDistance = getHorizontalPipeSetGap()
     isDayTheme = true
     currentPipe = assets.obstacle.pipe.green
     score = 0

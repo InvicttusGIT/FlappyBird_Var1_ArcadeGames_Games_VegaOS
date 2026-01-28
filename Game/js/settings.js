@@ -9,14 +9,18 @@ const backgroundScrollSpeed = 20
 
 const verticalPipeGapMin = 400
 const verticalPipeGapMax = 480
+const fixedVerticalPipeGap = 420
 
 const horizontalPipeSetGapMin = 160
 const horizontalPipeSetGapMax = 300
+const fixedHorizontalPipeSetGap = 220
+
+const useRandomPipeGaps = false
 
 const scoreToChangeLevel = 5
 
-const minGameSpeed = 100
-const maxGameSpeed = 250
+const minGameSpeed = 120
+const maxGameSpeed = 150
 const gameSpeedIncrement = 20
 
 const upwardVelocity = -250
