@@ -21,12 +21,6 @@ function createConfigurations(preload, create, update) {
         },
         physics: {
             default: 'arcade',
-            arcade: {
-                gravity: { y: 300 },
-                debug: true,
-                debugShowBody: true,
-                debugShowVelocity: true
-            }
         },
         scene: {
             preload,
