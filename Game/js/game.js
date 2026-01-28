@@ -276,6 +276,7 @@ function hitBird(player) {
     gameStarted = false
 
     player.anims.play(getAnimationBird(birdName).stop)
+    this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
 
     gameOverBanner.visible = true
     restartButton.visible = true
