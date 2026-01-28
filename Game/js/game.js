@@ -41,6 +41,11 @@ function preload() {
     this.load.image(assets.obstacle.pipe.red.top, 'assets/pipe-red-top.png')
     this.load.image(assets.obstacle.pipe.red.bottom, 'assets/pipe-red-bottom.png')
 
+    // Audio
+    this.load.audio('flap', 'assets/audio/flapps.mp3')
+    this.load.audio('score', 'assets/audio/score.mp3')
+    this.load.audio('gameover', 'assets/audio/game-over.mp3')
+
     // Start game
     this.load.image(assets.scene.messageInitial, 'assets/message-initial.png')
 
@@ -277,6 +282,8 @@ function hitBird(player) {
 
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
+    if (gameOverSound && !gameOverSound.isPlaying)
+        gameOverSound.play()
 
     gameOverBanner.visible = true
     restartButton.visible = true
@@ -293,6 +300,8 @@ function updateScore(_, gap) {
 
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
+    if (scoreSound && !scoreSound.isPlaying)
+        scoreSound.play()
 
     updateScoreboard()
 }
@@ -369,9 +378,12 @@ function moveBird() {
     if (!gameStarted)
         startGame(game.scene.scenes[0])
 
-    
+    if (flapSound && !flapSound.isPlaying)
+    {
+        flapSound.play()
+    }
+
     currentVelocity = upwardVelocity
-    //currentVelocity = minVelocity
     player.setVelocityY(currentVelocity)
     player.angle = -20
     framesMoveUp = 5
@@ -441,6 +453,8 @@ function restartGame() {
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
+    if (gameOverSound && gameOverSound.isPlaying)
+        gameOverSound.stop()
 
     const gameScene = game.scene.scenes[0]
     prepareGame(gameScene)
@@ -471,6 +485,10 @@ function prepareGame(scene) {
     player.setCollideWorldBounds(true)
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
+
+    flapSound = scene.sound.add('flap')
+    scoreSound = scene.sound.add('score', { volume: 0.6 })
+    gameOverSound = scene.sound.add('gameover')
 
     scene.physics.add.collider(player, groundCollider, hitBird, null, scene)
     scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)

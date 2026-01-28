@@ -39,3 +39,7 @@ let loadingBarBg
 let loadingBarFill
 
 let currentGameSpeed = minGameSpeed
+
+let flapSound
+let gameOverSound
+let scoreSound
