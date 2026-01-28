@@ -108,13 +108,6 @@ function create() {
 
     selectButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
 
-    debugText = this.add.text(4, 4, 'dt: 0 ms', {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: '#00ff00'
-    })
-    debugText.setDepth(50)
-
     // Ensure the canvas can receive key events on TV remotes.
     if (this.game && this.game.canvas) {
         this.game.canvas.setAttribute('tabindex', '0')
@@ -201,10 +194,6 @@ function update(t, dt) {
     
     const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
 
-    if (debugText) {
-        const fps = deltaMs > 0 ? (1000 / deltaMs).toFixed(1) : '0'
-        debugText.setText(`dt: ${deltaMs.toFixed(1)} ms (${fps} fps)`)
-    }
     //background image parallax effect
     if (!gameOver) {
     const parallaxDeltaBg = backgroundScrollSpeed * (deltaMs / 1000)
