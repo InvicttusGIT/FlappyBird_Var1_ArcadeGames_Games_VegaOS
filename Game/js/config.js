@@ -15,6 +15,11 @@ function createConfigurations(preload, create, update) {
         width: GAME_WIDTH,
         height: GAME_HEIGHT,
         parent: 'game-container',
+        // Vega WebView: HTML <audio> works reliably, WebAudio often doesn't.
+        // Force Phaser to use HTML5 Audio instead of Web Audio.
+        audio: {
+            disableWebAudio: true
+        },
         scale: {
             mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH

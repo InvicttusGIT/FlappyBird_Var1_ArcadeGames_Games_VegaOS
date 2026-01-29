@@ -184,6 +184,17 @@ function create() {
     restartButton.on('pointerdown', restartGame)
     restartButton.setDepth(20)
     restartButton.visible = false
+
+    // Audio watchdog: re-assert sound enabled on focus/visibility changes (Vega WebView can mute intermittently).
+    const scene = this
+    if (scene.game && scene.game.events) {
+        scene.game.events.on(Phaser.Core.Events.FOCUS, () => ensureAudioIsActive(scene))
+        scene.game.events.on(Phaser.Core.Events.BLUR, () => ensureAudioIsActive(scene))
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) ensureAudioIsActive(scene)
+    })
+    window.addEventListener('focus', () => ensureAudioIsActive(scene))
 }
 
 /**
@@ -271,8 +282,12 @@ function hitBird(player) {
 
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
-    if (gameOverSound && !gameOverSound.isPlaying)
-        gameOverSound.play()
+    ensureAudioIsActive(this)
+    if (gameOverSound && !gameOverSound.isPlaying) {
+        try {
+            gameOverSound.play()
+        } catch (_) {}
+    }
 
     gameOverBanner.visible = true
     restartButton.visible = true
@@ -289,8 +304,12 @@ function updateScore(_, gap) {
 
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
-    if (scoreSound && !scoreSound.isPlaying)
-        scoreSound.play()
+    ensureAudioIsActive(game.scene.scenes[0])
+    if (scoreSound) {
+        try {
+            scoreSound.play()
+        } catch (_) {}
+    }
 
     updateScoreboard()
 }
@@ -366,10 +385,15 @@ function moveBird() {
 
     if (!gameStarted)
         startGame(game.scene.scenes[0])
-
-    if (flapSound && !flapSound.isPlaying)
-    {
-        flapSound.play()
+    
+    const scene = game.scene.scenes[0]
+    ensureAudioIsActive(scene)
+    if (flapSound) {
+        try {
+            flapSound.play()
+        } catch (_) {
+            // Ignore playback errors (TV WebViews may block intermittently).
+        }
     }
 
     currentVelocity = upwardVelocity
@@ -475,9 +499,9 @@ function prepareGame(scene) {
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
 
-    flapSound = scene.sound.add('flap')
-    scoreSound = scene.sound.add('score', { volume: 0.6 })
-    gameOverSound = scene.sound.add('gameover')
+    flapSound = scene.sound.add('flap', { volume: 1.0 })
+    scoreSound = scene.sound.add('score', { volume: 0.1 })
+    gameOverSound = scene.sound.add('gameover', { volume: 0.1 })
 
     scene.physics.add.collider(player, groundCollider, hitBird, null, scene)
     scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)

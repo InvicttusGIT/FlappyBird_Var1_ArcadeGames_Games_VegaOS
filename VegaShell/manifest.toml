@@ -13,25 +13,39 @@ launch-type = "singleton"
 categories = ["com.amazon.category.main"]
 
 [wants]
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
 
-# Web renderer service for rendering web content
 [[wants.service]]
 id = "com.amazon.webview.renderer_service"
 
-# If Web App needs keyboard support
 [[wants.service]]
 id = "com.amazon.inputmethod.service"
 
-
-# If Web App needs audio playback
 [[wants.service]]
 id = "com.amazon.audio.stream"
 
-# Required for audio management features to work in WebView, features like audio focus, volume control 
 [[wants.service]]
 id = "com.amazon.audio.control"
 
-# To enable accessibility support for your app, it's highly recommended you add UCC service with Service Registrar
 [[wants.service]]
 id = "com.amazon.kepler.ucc.publisher"
 
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+
+[[wants.service]]
+id = "com.amazon.gipc.uuid.*"
+
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+
+[[wants.service]]
+id = "com.amazon.audio.system"
+
+[offers]
+[[offers.service]]
+id = "com.amazon.gipc.uuid.*"
