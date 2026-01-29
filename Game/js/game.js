@@ -499,7 +499,7 @@ function prepareGame(scene) {
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
 
-    flapSound = scene.sound.add('flap', { volume: 1.0 })
+    flapSound = scene.sound.add('flap', { volume: 0.5 })
     scoreSound = scene.sound.add('score', { volume: 0.1 })
     gameOverSound = scene.sound.add('gameover', { volume: 0.1 })
 
