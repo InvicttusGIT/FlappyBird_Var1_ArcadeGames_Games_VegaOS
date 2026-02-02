@@ -67,17 +67,7 @@ function preload() {
         frameHeight: 24
     })
 
-    // Numbers
-    this.load.image(assets.scoreboard.number0, 'assets/number0.png')
-    this.load.image(assets.scoreboard.number1, 'assets/number1.png')
-    this.load.image(assets.scoreboard.number2, 'assets/number2.png')
-    this.load.image(assets.scoreboard.number3, 'assets/number3.png')
-    this.load.image(assets.scoreboard.number4, 'assets/number4.png')
-    this.load.image(assets.scoreboard.number5, 'assets/number5.png')
-    this.load.image(assets.scoreboard.number6, 'assets/number6.png')
-    this.load.image(assets.scoreboard.number7, 'assets/number7.png')
-    this.load.image(assets.scoreboard.number8, 'assets/number8.png')
-    this.load.image(assets.scoreboard.number9, 'assets/number9.png')
+    this.load.font('jersey15', 'assets/font/Jersey15.ttf')
 }
 
 /**
@@ -92,8 +82,6 @@ function create() {
 
     gapsGroup = this.physics.add.group()
     pipesGroup = this.physics.add.group()
-    scoreboardGroup = this.physics.add.staticGroup()
-    highScoreGroup = this.physics.add.staticGroup()
 
     const groundY = 458
     groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
@@ -196,6 +184,50 @@ function create() {
         if (!document.hidden) ensureAudioIsActive(scene)
     })
     window.addEventListener('focus', () => ensureAudioIsActive(scene))
+
+    // Score text style with blue color and white stroke
+    const scoreTextStyle = {
+        fontFamily: 'jersey15',
+        fontSize: '50px',
+        color: SCORE_BLUE_COLOR,
+        stroke: SCORE_WHITE_COLOR,
+        strokeThickness: 6
+    }
+
+    // Label text style (white color, smaller font)
+    const labelTextStyle = {
+        fontFamily: 'jersey15',
+        fontSize: '18px',
+        color: SCORE_WHITE_COLOR,
+        stroke: SCORE_BLUE_COLOR,
+        strokeThickness: 3,
+        letterSpacing: 2
+    }
+
+    // Create score text (left side) - 30px from top, 95px from left
+    scoreText = this.add.text(40, 10, '0', scoreTextStyle)
+    scoreText.setOrigin(0, 0)
+    scoreText.setDepth(10)
+    scoreText.visible = false
+
+    // Create score label (below score text, 30px margin from bottom of number)
+    // Number is 150px font size, so label at 30 + 150 + 30 = 210
+    scoreLabelText = this.add.text(40, 60, 'CURRENT SCORE', labelTextStyle)
+    scoreLabelText.setOrigin(0, 0)
+    scoreLabelText.setDepth(10)
+    scoreLabelText.visible = false
+
+    // Create high score text (right side) - 30px from top, 95px from right
+    highScoreText = this.add.text(GAME_WIDTH - 40, 10, '0', scoreTextStyle)
+    highScoreText.setOrigin(1, 0)  // Right-aligned
+    highScoreText.setDepth(10)
+    highScoreText.visible = false
+
+    // Create high score label (below high score text, 30px margin from bottom of number)
+    highScoreLabelText = this.add.text(GAME_WIDTH - 40, 60, 'HIGH SCORE', labelTextStyle)
+    highScoreLabelText.setOrigin(1, 0)  // Right-aligned
+    highScoreLabelText.setDepth(10)
+    highScoreLabelText.visible = false
 }
 
 /**
@@ -450,21 +482,20 @@ function getAnimationBird(birdColor) {
  * Update the game scoreboard - displays current score on top left.
  */
 function updateScoreboard() {
-    scoreboardGroup.clear(true, true)
-
     // Only show score during gameplay and game over, not on start screen
     if (!gameStarted && !gameOver) {
+        if (scoreText) scoreText.visible = false
+        if (scoreLabelText) scoreLabelText.visible = false
         return
     }
 
-    const scoreAsString = score.toString()
-    const scoreY = 30
-    const scoreXLeft = 20 // Left side position
-    
-    // Display score from left side
-    for (let i = 0; i < scoreAsString.length; i++) {
-        const xPos = scoreXLeft + (i * assets.scoreboard.width)
-        scoreboardGroup.create(xPos, scoreY, assets.scoreboard.base + scoreAsString[i]).setDepth(10)
+    // Update score text
+    if (scoreText) {
+        scoreText.setText(score.toString())
+        scoreText.visible = true
+    }
+    if (scoreLabelText) {
+        scoreLabelText.visible = true
     }
 }
 
@@ -472,24 +503,20 @@ function updateScoreboard() {
  * Update and display the high score on top right corner.
  */
 function updateHighScoreDisplay() {
-    highScoreGroup.clear(true, true)
-
     // Only show high score during gameplay and game over, not on start screen
     if (!gameStarted && !gameOver) {
+        if (highScoreText) highScoreText.visible = false
+        if (highScoreLabelText) highScoreLabelText.visible = false
         return
     }
 
-    const highScoreAsString = highScore.toString()
-    const highScoreY = 30
-    const scoreXRight = GAME_WIDTH - 20 // Right side position (20px from right edge)
-    
-    // Display high score from right side (right-aligned)
-    const totalWidth = highScoreAsString.length * assets.scoreboard.width
-    const startX = scoreXRight - totalWidth
-    
-    for (let i = 0; i < highScoreAsString.length; i++) {
-        const xPos = startX + (i * assets.scoreboard.width)
-        highScoreGroup.create(xPos, highScoreY, assets.scoreboard.base + highScoreAsString[i]).setDepth(10)
+    // Update high score text
+    if (highScoreText) {
+        highScoreText.setText(highScore.toString())
+        highScoreText.visible = true
+    }
+    if (highScoreLabelText) {
+        highScoreLabelText.visible = true
     }
 }
 
@@ -501,8 +528,6 @@ function restartGame() {
     pipesGroup.clear(true, true)
     pipesGroup.clear(true, true)
     gapsGroup.clear(true, true)
-    scoreboardGroup.clear(true, true)
-    highScoreGroup.clear(true, true)
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
@@ -552,9 +577,11 @@ function prepareGame(scene) {
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
-    // Clear scoreboards on start screen (they'll be shown when game starts)
-    scoreboardGroup.clear(true, true)
-    highScoreGroup.clear(true, true)
+    // Hide scoreboards on start screen (they'll be shown when game starts)
+    if (scoreText) scoreText.visible = false
+    if (scoreLabelText) scoreLabelText.visible = false
+    if (highScoreText) highScoreText.visible = false
+    if (highScoreLabelText) highScoreLabelText.visible = false
 }
 
 /**

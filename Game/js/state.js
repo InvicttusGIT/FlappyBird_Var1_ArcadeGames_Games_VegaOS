@@ -25,10 +25,12 @@ let pipeTravelDistanceSinceLast
 let nextPipeSpawnDistance
 let currentPipe
 
-let scoreboardGroup
+let scoreText
+let scoreLabelText
 let score
 let highScore
-let highScoreGroup
+let highScoreText
+let highScoreLabelText
 
 let currentVelocity = minVelocity
 let isDayTheme = true

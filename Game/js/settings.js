@@ -2,6 +2,11 @@
  *
  * Game tuning values.
  */
+
+// Colors
+const SCORE_BLUE_COLOR = '#037BDC'
+const SCORE_WHITE_COLOR = '#FFFFFF'
+
 const maxVelocity = 500
 const minVelocity = 50
 
