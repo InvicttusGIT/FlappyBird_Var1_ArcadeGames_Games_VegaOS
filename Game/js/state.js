@@ -27,6 +27,8 @@ let currentPipe
 
 let scoreboardGroup
 let score
+let highScore
+let highScoreGroup
 
 let currentVelocity = minVelocity
 let isDayTheme = true

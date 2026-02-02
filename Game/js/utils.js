@@ -26,3 +26,29 @@ function ensureAudioIsActive(scene) {
     if (scoreSound && typeof scoreSound.setMute === 'function') scoreSound.setMute(false)
     if (gameOverSound && typeof gameOverSound.setMute === 'function') gameOverSound.setMute(false)
 }
+
+/**
+ * Get high score from localStorage.
+ * @returns {number} The high score, or 0 if not set.
+ */
+function getHighScore() {
+    try {
+        const stored = localStorage.getItem('flappyBirdHighScore')
+        return stored ? parseInt(stored, 10) : 0
+    } catch (e) {
+        // localStorage may not be available in some environments
+        return 0
+    }
+}
+
+/**
+ * Save high score to localStorage.
+ * @param {number} newHighScore - The new high score to save.
+ */
+function saveHighScore(newHighScore) {
+    try {
+        localStorage.setItem('flappyBirdHighScore', newHighScore.toString())
+    } catch (e) {
+        // localStorage may not be available, silently fail
+    }
+}

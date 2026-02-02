@@ -93,6 +93,7 @@ function create() {
     gapsGroup = this.physics.add.group()
     pipesGroup = this.physics.add.group()
     scoreboardGroup = this.physics.add.staticGroup()
+    highScoreGroup = this.physics.add.staticGroup()
 
     const groundY = 458
     groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
@@ -291,6 +292,9 @@ function hitBird(player) {
 
     gameOverBanner.visible = true
     restartButton.visible = true
+    
+    // Update and display high score
+    updateHighScoreDisplay()
 }
 
 /**
@@ -302,6 +306,12 @@ function updateScore(_, gap) {
     score++
     gap.destroy()
 
+    // Check and update high score
+    if (score > highScore) {
+        highScore = score
+        saveHighScore(highScore)
+    }
+
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
     ensureAudioIsActive(game.scene.scenes[0])
@@ -312,6 +322,7 @@ function updateScore(_, gap) {
     }
 
     updateScoreboard()
+    updateHighScoreDisplay() // Update high score display when score changes
 }
 
 function advanceLevel() {
@@ -436,21 +447,49 @@ function getAnimationBird(birdColor) {
 }
 
 /**
- * Update the game scoreboard.
+ * Update the game scoreboard - displays current score on top left.
  */
 function updateScoreboard() {
     scoreboardGroup.clear(true, true)
 
-    const scoreAsString = score.toString()
-    if (scoreAsString.length == 1)
-        scoreboardGroup.create(assets.scene.width, 30, assets.scoreboard.base + score).setDepth(10)
-    else {
-        let initialPosition = assets.scene.width - ((score.toString().length * assets.scoreboard.width) / 2)
+    // Only show score during gameplay and game over, not on start screen
+    if (!gameStarted && !gameOver) {
+        return
+    }
 
-        for (let i = 0; i < scoreAsString.length; i++) {
-            scoreboardGroup.create(initialPosition, 30, assets.scoreboard.base + scoreAsString[i]).setDepth(10)
-            initialPosition += assets.scoreboard.width
-        }
+    const scoreAsString = score.toString()
+    const scoreY = 30
+    const scoreXLeft = 20 // Left side position
+    
+    // Display score from left side
+    for (let i = 0; i < scoreAsString.length; i++) {
+        const xPos = scoreXLeft + (i * assets.scoreboard.width)
+        scoreboardGroup.create(xPos, scoreY, assets.scoreboard.base + scoreAsString[i]).setDepth(10)
+    }
+}
+
+/**
+ * Update and display the high score on top right corner.
+ */
+function updateHighScoreDisplay() {
+    highScoreGroup.clear(true, true)
+
+    // Only show high score during gameplay and game over, not on start screen
+    if (!gameStarted && !gameOver) {
+        return
+    }
+
+    const highScoreAsString = highScore.toString()
+    const highScoreY = 30
+    const scoreXRight = GAME_WIDTH - 20 // Right side position (20px from right edge)
+    
+    // Display high score from right side (right-aligned)
+    const totalWidth = highScoreAsString.length * assets.scoreboard.width
+    const startX = scoreXRight - totalWidth
+    
+    for (let i = 0; i < highScoreAsString.length; i++) {
+        const xPos = startX + (i * assets.scoreboard.width)
+        highScoreGroup.create(xPos, highScoreY, assets.scoreboard.base + highScoreAsString[i]).setDepth(10)
     }
 }
 
@@ -463,6 +502,7 @@ function restartGame() {
     pipesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     scoreboardGroup.clear(true, true)
+    highScoreGroup.clear(true, true)
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
@@ -486,6 +526,10 @@ function prepareGame(scene) {
     isDayTheme = true
     currentPipe = assets.obstacle.pipe.green
     score = 0
+    // Load high score from localStorage on game start
+    if (highScore === undefined) {
+        highScore = getHighScore()
+    }
     currentVelocity = minVelocity
     gameOver = false
     backgroundDay.visible = isDayTheme
@@ -508,6 +552,9 @@ function prepareGame(scene) {
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
+    // Clear scoreboards on start screen (they'll be shown when game starts)
+    scoreboardGroup.clear(true, true)
+    highScoreGroup.clear(true, true)
 }
 
 /**
@@ -520,8 +567,9 @@ function startGame(scene) {
 
     player.body.allowGravity = true
 
-    const score0 = scoreboardGroup.create(assets.scene.width, 30, assets.scoreboard.number0)
-    score0.setDepth(20)
+    // Display initial score (0) on top left and high score on top right
+    updateScoreboard()
+    updateHighScoreDisplay()
 
     makePipes(scene)
 }
