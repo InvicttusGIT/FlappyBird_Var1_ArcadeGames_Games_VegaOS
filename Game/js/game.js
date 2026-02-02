@@ -48,6 +48,10 @@ function preload() {
 
     // Start game
     this.load.image(assets.scene.messageInitial, 'assets/message-initial.png')
+    this.load.image(assets.ui.title, 'assets/FlapDash.png')
+    this.load.image(assets.ui.playButton, 'assets/play-button.png')
+    this.load.image(assets.ui.musicOn, 'assets/music-on.png')
+    this.load.image(assets.ui.musicOff, 'assets/music-off.png')
 
     // End game
     this.load.image(assets.scene.gameOver, 'assets/gameover.png')
@@ -75,10 +79,17 @@ function preload() {
  */
 function create() {
     backgroundDay = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.day).setInteractive()
-    backgroundDay.on('pointerdown', moveBird)
+    backgroundDay.on('pointerdown', () => {
+        // Prevent accidental start on TVs: only flap when game already started.
+        if (gameStarted && !gameOver) moveBird()
+        else setPlayButtonFocus(true)
+    })
     backgroundNight = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.night).setInteractive()
     backgroundNight.visible = false
-    backgroundNight.on('pointerdown', moveBird)
+    backgroundNight.on('pointerdown', () => {
+        if (gameStarted && !gameOver) moveBird()
+        else setPlayButtonFocus(true)
+    })
 
     gapsGroup = this.physics.add.group()
     pipesGroup = this.physics.add.group()
@@ -96,6 +107,10 @@ function create() {
     messageInitial.visible = false
 
     selectButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+    leftButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
+    rightButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
+    upButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP)
+    downButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN)
 
     // Ensure the canvas can receive key events on TV remotes.
     if (this.game && this.game.canvas) {
@@ -166,13 +181,18 @@ function create() {
     prepareGame(this)
 
     gameOverBanner = this.add.image(assets.scene.width, 206, assets.scene.gameOver)
+    // Match the start screen FlapDash size (same max box)
+    fitImageToBox(gameOverBanner, 400, 200)
     gameOverBanner.setDepth(20)
     gameOverBanner.visible = false
 
     restartButton = this.add.image(assets.scene.width, 300, assets.scene.restart).setInteractive()
     restartButton.on('pointerdown', restartGame)
+    // Match the start screen play button size (same max box)
+    fitImageToBox(restartButton, 200, 100)
     restartButton.setDepth(20)
     restartButton.visible = false
+    restartButtonBaseScale = restartButton.scaleX
 
     // Audio watchdog: re-assert sound enabled on focus/visibility changes (Vega WebView can mute intermittently).
     const scene = this
@@ -185,7 +205,7 @@ function create() {
     })
     window.addEventListener('focus', () => ensureAudioIsActive(scene))
 
-    // Score text style with blue color and white stroke
+    // Score text style with blue color and white stroke (reused for UI copy)
     const scoreTextStyle = {
         fontFamily: 'jersey15',
         fontSize: '50px',
@@ -228,6 +248,175 @@ function create() {
     highScoreLabelText.setOrigin(1, 0)  // Right-aligned
     highScoreLabelText.setDepth(10)
     highScoreLabelText.visible = false
+
+    // --- Start screen UI (centered container) ---
+    createStartScreenUI(this, scoreTextStyle)
+    setStartScreenVisible(true)
+}
+
+// ---------------------------
+// UI helpers (keep modular)
+// ---------------------------
+
+function createStartScreenUI(scene, scoreTextStyle) {
+    // Container centered
+    startUiContainer = scene.add.container(GAME_CENTER_X, GAME_HEIGHT / 2)
+    startUiContainer.setDepth(50)
+
+    startTitleImage = scene.add.image(0, -70, assets.ui.title)
+    startTitleImage.setOrigin(0.5, 0.5)
+    // FlapDash target size: fit within ~250w x 150h
+    fitImageToBox(startTitleImage, 400, 200)
+
+    playButtonImage = scene.add.image(0, 40, assets.ui.playButton).setInteractive()
+    playButtonImage.setOrigin(0.5, 0.5)
+    // Play button size control (tweak as desired)
+    fitImageToBox(playButtonImage, 200, 100)
+    // Store base scale so focus tween doesn't override the resized value
+    playButtonBaseScale = playButtonImage.scaleX
+
+    // Hint text (only visible when play button is focused)
+    playHintText = scene.add.text(
+        0,
+        120,
+        'PRESS "OK" TO FLY',
+        {
+            fontFamily: scoreTextStyle.fontFamily || 'jersey15',
+            fontSize: '22px',
+            color: SCORE_BLUE_COLOR,
+            stroke: SCORE_WHITE_COLOR,
+            strokeThickness: 6,
+            letterSpacing: 2
+        }
+    )
+    playHintText.setOrigin(0.5, 0.5)
+    playHintText.visible = false
+
+    startUiContainer.add([startTitleImage, playButtonImage, playHintText])
+
+    // Pointer focus behavior (mouse/touch)
+    playButtonImage.on('pointerover', () => setStartScreenFocus('play'))
+    playButtonImage.on('pointerout', () => {})
+    playButtonImage.on('pointerdown', () => {
+        setStartScreenFocus('play')
+        attemptStartFromPlayButton()
+    })
+
+    // Music toggle icon (top-right, same placement as high score numbers)
+    musicToggleImage = scene.add.image(GAME_WIDTH - 40, 10, assets.ui.musicOn).setOrigin(1, 0).setInteractive()
+    musicToggleImage.setDepth(60)
+    musicToggleImage.on('pointerdown', () => {
+        setStartScreenFocus('music')
+        toggleMusic(scene)
+    })
+    // Music icon size control (tweak as desired)
+    fitImageToBox(musicToggleImage, 50, 50)
+    musicButtonBaseScale = musicToggleImage.scaleX
+    musicToggleImage.on('pointerover', () => setStartScreenFocus('music'))
+    musicToggleImage.on('pointerout', () => {})
+}
+
+function setStartScreenVisible(visible) {
+    if (startUiContainer) startUiContainer.visible = visible
+    if (musicToggleImage) musicToggleImage.visible = visible
+
+    // Keep existing messageInitial hidden (legacy)
+    if (messageInitial) messageInitial.visible = false
+
+    // Hide score UI on start screen
+    if (visible) {
+        if (scoreText) scoreText.visible = false
+        if (scoreLabelText) scoreLabelText.visible = false
+        if (highScoreText) highScoreText.visible = false
+        if (highScoreLabelText) highScoreLabelText.visible = false
+    }
+
+    // Ensure a default focused state on start screen
+    if (visible) {
+        setStartScreenFocus('play')
+    } else {
+        setStartScreenFocus(null)
+    }
+}
+
+function setStartScreenFocus(target) {
+    startScreenFocus = target
+    const isPlay = target === 'play'
+    const isMusic = target === 'music'
+    setPlayButtonFocus(isPlay)
+    setMusicButtonPulse(game.scene.scenes[0], isMusic)
+}
+
+function setPlayButtonFocus(focused) {
+    playButtonFocused = focused
+    if (!playButtonImage) return
+
+    if (playHintText) playHintText.visible = focused
+
+    if (focused) {
+        playPulseTween = startPulse(playButtonImage, playButtonBaseScale, playPulseTween, {
+            scale: 1.08,
+            duration: 450
+        })
+    } else {
+        playPulseTween = stopPulse(playButtonImage, playButtonBaseScale, playPulseTween)
+    }
+}
+
+function attemptStartFromPlayButton() {
+    if (gameOver || gameStarted) return
+    if (startScreenFocus !== 'play') return
+    startGame(game.scene.scenes[0])
+    setStartScreenVisible(false)
+}
+
+function setRestartPulse(scene, enabled) {
+    if (!restartButton) return
+    if (enabled) {
+        restartPulseTween = startPulse(restartButton, restartButtonBaseScale, restartPulseTween, {
+            scale: 1.06,
+            duration: 450
+        })
+    } else {
+        restartPulseTween = stopPulse(restartButton, restartButtonBaseScale, restartPulseTween)
+    }
+}
+
+function setMusicButtonPulse(scene, enabled) {
+    if (!musicToggleImage) return
+    if (enabled) {
+        musicPulseTween = startPulse(musicToggleImage, musicButtonBaseScale, musicPulseTween, {
+            scale: 1.06,
+            duration: 450
+        })
+    } else {
+        musicPulseTween = stopPulse(musicToggleImage, musicButtonBaseScale, musicPulseTween)
+    }
+}
+
+function startPulse(target, baseScale, existingTween, options) {
+    if (existingTween) existingTween.stop()
+    target.setScale(baseScale)
+    return createPulseTween(target.scene, target, baseScale, options)
+}
+
+function stopPulse(target, baseScale, existingTween) {
+    if (existingTween) existingTween.stop()
+    target.setScale(baseScale)
+    return null
+}
+
+function toggleMusic(scene) {
+    isMusicOn = !isMusicOn
+    if (musicToggleImage) {
+        musicToggleImage.setTexture(isMusicOn ? assets.ui.musicOn : assets.ui.musicOff)
+    }
+
+    // If you later re-enable bg music, wire it here.
+    // For now, we mute/unmute Phaser sound manager (HTML5 audio backend).
+    if (scene && scene.sound) {
+        scene.sound.mute = !isMusicOn
+    }
 }
 
 /**
@@ -235,6 +424,10 @@ function create() {
  */
 function update(t, dt) {
     const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
+    const leftPressed = Phaser.Input.Keyboard.JustDown(leftButton)
+    const rightPressed = Phaser.Input.Keyboard.JustDown(rightButton)
+    const upPressed = Phaser.Input.Keyboard.JustDown(upButton)
+    const downPressed = Phaser.Input.Keyboard.JustDown(downButton)
     
     const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
 
@@ -255,8 +448,12 @@ function update(t, dt) {
     }
 
     if (!gameStarted) {
-        if (flapPressed)
-            moveBird()
+        if (leftPressed || upPressed) setStartScreenFocus('play')
+        if (rightPressed || downPressed) setStartScreenFocus('music')
+        if (flapPressed) {
+            if (startScreenFocus === 'play') attemptStartFromPlayButton()
+            if (startScreenFocus === 'music') toggleMusic(this)
+        }
         return
     }
 
@@ -324,6 +521,7 @@ function hitBird(player) {
 
     gameOverBanner.visible = true
     restartButton.visible = true
+    setRestartPulse(this, true)
     
     // Update and display high score
     updateHighScoreDisplay()
@@ -510,6 +708,13 @@ function updateHighScoreDisplay() {
         return
     }
 
+    // Hide high score during gameplay once current score surpasses it
+    if (gameStarted && !gameOver && score > runHighScoreBaseline) {
+        if (highScoreText) highScoreText.visible = false
+        if (highScoreLabelText) highScoreLabelText.visible = false
+        return
+    }
+
     // Update high score text
     if (highScoreText) {
         highScoreText.setText(highScore.toString())
@@ -535,6 +740,7 @@ function restartGame() {
         gameOverSound.stop()
 
     const gameScene = game.scene.scenes[0]
+    setRestartPulse(gameScene, false)
     prepareGame(gameScene)
 
     gameScene.physics.resume()
@@ -555,11 +761,13 @@ function prepareGame(scene) {
     if (highScore === undefined) {
         highScore = getHighScore()
     }
+    runHighScoreBaseline = highScore
     currentVelocity = minVelocity
     gameOver = false
     backgroundDay.visible = isDayTheme
     backgroundNight.visible = !isDayTheme
-    messageInitial.visible = true
+    // Start screen UI
+    setStartScreenVisible(true)
 
     birdName = getRandomBird()
     player = scene.physics.add.sprite(100, 250, birdName)
@@ -590,7 +798,8 @@ function prepareGame(scene) {
  */
 function startGame(scene) {
     gameStarted = true
-    messageInitial.visible = false
+    setStartScreenVisible(false)
+    moveBird() //give bird an initial jump
 
     player.body.allowGravity = true
 

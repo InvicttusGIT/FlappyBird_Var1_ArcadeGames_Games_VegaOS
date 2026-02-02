@@ -28,6 +28,44 @@ function ensureAudioIsActive(scene) {
 }
 
 /**
+ * Fit an image inside a max width/height box while keeping aspect ratio.
+ * @param {Phaser.GameObjects.Image} image
+ * @param {number} maxW
+ * @param {number} maxH
+ */
+function fitImageToBox(image, maxW, maxH) {
+    if (!image) return
+    const srcW = image.width || 1
+    const srcH = image.height || 1
+    const scale = Math.min(maxW / srcW, maxH / srcH)
+    image.setScale(scale)
+}
+
+/**
+ * Create a reusable pulse tween for UI elements.
+ * @param {Phaser.Scene} scene
+ * @param {Phaser.GameObjects.GameObject} target
+ * @param {number} baseScale
+ * @param {object} [options]
+ * @returns {Phaser.Tweens.Tween|null}
+ */
+function createPulseTween(scene, target, baseScale, options) {
+    if (!scene || !scene.tweens || !target) return null
+    const opts = options || {}
+    const scale = typeof opts.scale === 'number' ? opts.scale : 1.08
+    const duration = typeof opts.duration === 'number' ? opts.duration : 450
+    const ease = opts.ease || 'Sine.easeInOut'
+    return scene.tweens.add({
+        targets: target,
+        scale: baseScale * scale,
+        duration,
+        yoyo: true,
+        repeat: -1,
+        ease
+    })
+}
+
+/**
  * Get high score from localStorage.
  * @returns {number} The high score, or 0 if not set.
  */

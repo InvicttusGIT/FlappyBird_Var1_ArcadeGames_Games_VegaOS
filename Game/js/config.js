@@ -64,6 +64,12 @@ const assets = {
         restart: 'restart-button',
         messageInitial: 'message-initial'
     },
+    ui: {
+        title: 'ui-title',
+        playButton: 'ui-play-button',
+        musicOn: 'ui-music-on',
+        musicOff: 'ui-music-off'
+    },
     scoreboard: {
         width: 25,
         base: 'number',
