@@ -34,6 +34,8 @@ let isMusicOn = true
 // Restart pulse (reused animation)
 let restartPulseTween
 let restartButtonBaseScale = 1
+let restartEnableTimer
+let restartEnabled = false
 
 let player
 let birdName

@@ -442,7 +442,7 @@ function update(t, dt) {
         groundSprite.tilePositionX += currentGameSpeed * (deltaMs / 1000)
     }
     if (gameOver) {
-        if (flapPressed)
+        if (flapPressed && restartEnabled)
             restartGame()
         return
     }
@@ -521,7 +521,20 @@ function hitBird(player) {
 
     gameOverBanner.visible = true
     restartButton.visible = true
-    setRestartPulse(this, true)
+    // Temporarily disable restart click until shake completes
+    if (restartEnableTimer) {
+        restartEnableTimer.remove(false)
+        restartEnableTimer = null
+    }
+    restartEnabled = false
+    if (restartButton) restartButton.disableInteractive()
+    setRestartPulse(this, false)
+    restartEnableTimer = this.time.delayedCall(gameOverShakeDurationMs, () => {
+        if (!restartButton) return
+        restartEnabled = true
+        restartButton.setInteractive()
+        setRestartPulse(this, true)
+    })
     
     // Update and display high score
     updateHighScoreDisplay()
@@ -730,12 +743,18 @@ function updateHighScoreDisplay() {
  * Clean all groups, hide game over objects and stop game physics.
  */
 function restartGame() {
+    restartEnabled = false
     pipesGroup.clear(true, true)
     pipesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
+    if (restartEnableTimer) {
+        restartEnableTimer.remove(false)
+        restartEnableTimer = null
+    }
+    if (restartButton) restartButton.disableInteractive()
     if (gameOverSound && gameOverSound.isPlaying)
         gameOverSound.stop()
 
@@ -764,6 +783,7 @@ function prepareGame(scene) {
     runHighScoreBaseline = highScore
     currentVelocity = minVelocity
     gameOver = false
+    restartEnabled = false
     backgroundDay.visible = isDayTheme
     backgroundNight.visible = !isDayTheme
     // Start screen UI
