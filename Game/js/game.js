@@ -536,6 +536,12 @@ function hitBird(player) {
         setRestartPulse(this, true)
     })
     
+    // If this run beat the saved high score, persist it now
+    if (score > highScore) {
+        highScore = score
+        saveHighScore(highScore)
+    }
+
     // Update and display high score
     updateHighScoreDisplay()
 }
@@ -548,12 +554,6 @@ function hitBird(player) {
 function updateScore(_, gap) {
     score++
     gap.destroy()
-
-    // Check and update high score
-    if (score > highScore) {
-        highScore = score
-        saveHighScore(highScore)
-    }
 
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
