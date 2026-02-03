@@ -448,8 +448,16 @@ function update(t, dt) {
     }
 
     if (!gameStarted) {
-        if (leftPressed || upPressed) setStartScreenFocus('play')
-        if (rightPressed || downPressed) setStartScreenFocus('music')
+        // Horizontal navigation: left/right between play and music
+        if (leftPressed) setStartScreenFocus('play')
+        if (rightPressed) setStartScreenFocus('music')
+        // Vertical navigation: play (down) -> music, music (up) -> play
+        if (upPressed) {
+            if (startScreenFocus === 'play') setStartScreenFocus('music')
+        }
+        if (downPressed) {
+            if (startScreenFocus === 'music') setStartScreenFocus('play')
+        }
         if (flapPressed) {
             if (startScreenFocus === 'play') attemptStartFromPlayButton()
             if (startScreenFocus === 'music') toggleMusic(this)
