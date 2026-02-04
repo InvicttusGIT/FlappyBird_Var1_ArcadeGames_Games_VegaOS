@@ -59,7 +59,10 @@ const assets = {
             day: 'background-day',
             night: 'background-night'
         },
-        ground: 'ground',
+        ground: {
+            day: 'ground-day',
+            night: 'ground-night'
+        },
         gameOver: 'game-over',
         restart: 'restart-button',
         messageInitial: 'message-initial'
