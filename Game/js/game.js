@@ -33,7 +33,8 @@ function preload() {
     // Backgrounds and ground
     this.load.image(assets.scene.background.day, 'assets/background-day.png')
     this.load.image(assets.scene.background.night, 'assets/background-night.png')
-    this.load.image(assets.scene.ground, 'assets/ground-sprite.png')
+    this.load.image(assets.scene.ground.day, 'assets/ground-day.png')
+    this.load.image(assets.scene.ground.night, 'assets/ground-night.png')
 
     // Pipes
     this.load.image(assets.obstacle.pipe.green.top, 'assets/pipe-green-top.png')
@@ -95,10 +96,11 @@ function create() {
     pipesGroup = this.physics.add.group()
 
     const groundY = 458
-    groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
+    // Start with day ground; will be toggled with theme changes
+    groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground.day)
     groundSprite.setDepth(10)
 
-    groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground)
+    groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground.day)
     groundCollider.setVisible(false)
     groundCollider.setSize(GAME_WIDTH, 112, true)
 
@@ -562,7 +564,7 @@ function hitBird(player) {
 function updateScore(_, gap) {
     score++
     gap.destroy()
-
+    
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
     ensureAudioIsActive(game.scene.scenes[0])
@@ -585,6 +587,13 @@ function toggleThemeAndPipes() {
 
     backgroundDay.visible = isDayTheme
     backgroundNight.visible = !isDayTheme
+
+    // Toggle ground visuals with theme
+    if (groundSprite) {
+        groundSprite.setTexture(
+            isDayTheme ? assets.scene.ground.day : assets.scene.ground.night
+        )
+    }
 
     currentPipe = isDayTheme ? assets.obstacle.pipe.green : assets.obstacle.pipe.red
 
@@ -648,16 +657,12 @@ function moveBird() {
     if (!gameStarted)
         startGame(game.scene.scenes[0])
     
-    const scene = game.scene.scenes[0]
-    ensureAudioIsActive(scene)
+    ensureAudioIsActive(game.scene.scenes[0])
     if (flapSound) {
         try {
             flapSound.play()
-        } catch (_) {
-            // Ignore playback errors (TV WebViews may block intermittently).
-        }
-    }
-
+            console.log('flap sound played');
+        } catch (_) {}}
     currentVelocity = upwardVelocity
     player.setVelocityY(currentVelocity)
     player.angle = -20
