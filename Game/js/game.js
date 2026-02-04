@@ -799,6 +799,10 @@ function prepareGame(scene) {
     restartEnabled = false
     backgroundDay.visible = isDayTheme
     backgroundNight.visible = !isDayTheme
+    // Ensure ground starts in day theme as well
+    if (groundSprite) {
+        groundSprite.setTexture(assets.scene.ground.day)
+    }
     // Start screen UI
     setStartScreenVisible(true)
 
