@@ -1,5 +1,30 @@
+// Create Phaser game instance and set up a simple back‑button bridge for Vega.
 const configurations = createConfigurations(preload, create, update)
 const game = new Phaser.Game(configurations)
+
+// Vega remote "GoBack" key (keyCode 27) is forwarded to the React Native shell
+// so the native app can decide how to exit. This relies on the WebView being
+// created with allowSystemKeyEvents={true}.
+try {
+    window.addEventListener('keydown', function (event) {
+        if (!event || event.keyCode !== 27) return
+
+        try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                window.ReactNativeWebView.postMessage(
+                    JSON.stringify({ type: 'exit-game' })
+                )
+            }
+        } catch (e) {
+            // Silently ignore bridge errors on device
+        }
+
+        if (event.preventDefault) event.preventDefault()
+        return false
+    })
+} catch (_) {
+    // Swallow any unexpected errors in TV webview environments
+}
 /**
  *   Load the game assets.
  */
