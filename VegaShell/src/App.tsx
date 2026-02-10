@@ -29,7 +29,6 @@ export const App = () => {
   return (
     <View style={styles.container}>
       <WebView
-      style={{flex: 1, borderColor:'red'}}
         ref={webRef}
         onLoad={handleWebViewLoaded}
         onMessage={handleWebViewMessage}
@@ -38,7 +37,7 @@ export const App = () => {
         mediaPlaybackRequiresUserAction={false}
         allowsDefaultMediaControl={true}
         source={{
-          uri: "https://vega-flappy-v1.netlify.app/",
+          uri: "https://c2npfk3m-5500.asse.devtunnels.ms/",
         }}
         javaScriptEnabled={true}
         onError={(event) => {

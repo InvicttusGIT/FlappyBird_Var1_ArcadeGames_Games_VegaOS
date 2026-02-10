@@ -230,17 +230,6 @@ function create() {
     restartButton.visible = false
     restartButtonBaseScale = restartButton.scaleX
 
-    // Audio watchdog: re-assert sound enabled on focus/visibility changes (Vega WebView can mute intermittently).
-    const scene = this
-    if (scene.game && scene.game.events) {
-        scene.game.events.on(Phaser.Core.Events.FOCUS, () => ensureAudioIsActive(scene))
-        scene.game.events.on(Phaser.Core.Events.BLUR, () => ensureAudioIsActive(scene))
-    }
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) ensureAudioIsActive(scene)
-    })
-    window.addEventListener('focus', () => ensureAudioIsActive(scene))
-
     // Score text style with blue color and white stroke (reused for UI copy)
     const scoreTextStyle = {
         fontFamily: 'jersey15',
@@ -556,7 +545,6 @@ function hitBird(player) {
 
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
-    ensureAudioIsActive(this)
 
     // Stop gameplay background loop on game over
     if (flappsBackground && flappsBackground.isPlaying) {
@@ -609,7 +597,6 @@ function updateScore(_, gap) {
     
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
-    ensureAudioIsActive(game.scene.scenes[0])
     if (scoreSound) {
         try {
             scoreSound.play()
