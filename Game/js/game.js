@@ -832,7 +832,7 @@ function prepareGame(scene) {
 
     birdName = getRandomBird()
     player = scene.physics.add.sprite(100, 250, birdName)
-    player.body.setSize(25,20)
+    player.body.setCircle(11, 4, 2)
     player.setCollideWorldBounds(true)
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
