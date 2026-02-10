@@ -731,8 +731,8 @@ function updateHighScoreDisplay() {
     if (gameStarted && !gameOver && score > runHighScoreBaseline) {
         if (highScoreText) highScoreText.visible = false
         if (highScoreLabelText) highScoreLabelText.visible = false
-        highScoreLabelText.setColor(ORANGE_COLOR)
-        highScoreText.setColor(ORANGE_COLOR)
+        scoreLabelText.setStroke(ORANGE_COLOR)
+        scoreText.setColor(ORANGE_COLOR)
         return
     }
 
@@ -765,6 +765,10 @@ function restartGame() {
     if (restartButton) restartButton.disableInteractive()
     if (gameOverSound && gameOverSound.isPlaying)
         gameOverSound.stop()
+
+    // reset score text colors 
+        scoreLabelText.setStroke(SCORE_BLUE_COLOR)
+        scoreText.setColor(SCORE_BLUE_COLOR)
 
     const gameScene = game.scene.scenes[0]
     setRestartPulse(gameScene, false)

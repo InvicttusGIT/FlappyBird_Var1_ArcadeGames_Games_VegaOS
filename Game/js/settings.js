@@ -6,6 +6,8 @@
 // Colors
 const SCORE_BLUE_COLOR = '#037BDC'
 const SCORE_WHITE_COLOR = '#FFFFFF'
+const ORANGE_COLOR = '#FF5700'
+
 
 const maxVelocity = 500
 const minVelocity = 50
