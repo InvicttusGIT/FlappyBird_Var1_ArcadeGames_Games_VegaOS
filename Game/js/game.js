@@ -43,7 +43,6 @@ function preload() {
     this.load.image(assets.obstacle.pipe.red.bottom, 'assets/pipe-red-bottom.png')
 
     // Audio
-    this.load.audio('flap', 'assets/audio/flapps.mp3')
     this.load.audio('score', 'assets/audio/score.mp3')
     this.load.audio('gameover', 'assets/audio/game-over.mp3')
 
@@ -657,12 +656,6 @@ function moveBird() {
     if (!gameStarted)
         startGame(game.scene.scenes[0])
     
-    ensureAudioIsActive(game.scene.scenes[0])
-    if (flapSound) {
-        try {
-            flapSound.play()
-            console.log('flap sound played');
-        } catch (_) {}}
     currentVelocity = upwardVelocity
     player.setVelocityY(currentVelocity)
     player.angle = -20
@@ -738,6 +731,8 @@ function updateHighScoreDisplay() {
     if (gameStarted && !gameOver && score > runHighScoreBaseline) {
         if (highScoreText) highScoreText.visible = false
         if (highScoreLabelText) highScoreLabelText.visible = false
+        highScoreLabelText.setColor(ORANGE_COLOR)
+        highScoreText.setColor(ORANGE_COLOR)
         return
     }
 
@@ -813,7 +808,6 @@ function prepareGame(scene) {
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
 
-    flapSound = scene.sound.add('flap', { volume: 0.5 })
     scoreSound = scene.sound.add('score', { volume: 0.1 })
     gameOverSound = scene.sound.add('gameover', { volume: 0.1 })
 
