@@ -70,6 +70,8 @@ function preload() {
     // Audio
     this.load.audio('score', 'assets/audio/score.mp3')
     this.load.audio('gameover', 'assets/audio/game-over.mp3')
+    this.load.audio('backgroundMusic', 'assets/audio/background-music.mp3')
+    this.load.audio('flappsBackground', 'assets/audio/flapps.mp3')
 
     // Start game
     this.load.image(assets.scene.messageInitial, 'assets/message-initial.png')
@@ -203,6 +205,14 @@ function create() {
         }],
         frameRate: 20
     })
+
+    // Background music: play continuously in loop without any trigger.
+    // This is created once per scene and respects the global sound mute toggle.
+    backgroundMusic = this.sound.add('backgroundMusic', {
+        volume: 1,
+        loop: true
+    })
+    backgroundMusic.play()
 
     prepareGame(this)
 
@@ -547,6 +557,14 @@ function hitBird(player) {
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
     ensureAudioIsActive(this)
+
+    // Stop gameplay background loop on game over
+    if (flappsBackground && flappsBackground.isPlaying) {
+        try {
+            flappsBackground.stop()
+        } catch (_) {}
+    }
+
     if (gameOverSound && !gameOverSound.isPlaying) {
         try {
             gameOverSound.play()
@@ -861,7 +879,19 @@ function prepareGame(scene) {
 function startGame(scene) {
     gameStarted = true
     setStartScreenVisible(false)
-    moveBird() //give bird an initial jump
+
+    // Start flapps background loop when gameplay begins
+    if (!flappsBackground) {
+        flappsBackground = scene.sound.add('flappsBackground', {
+            volume: 0.4,
+            loop: true
+        })
+    }
+    try {
+        flappsBackground.play()
+    } catch (_) {}
+
+    moveBird() // give bird an initial jump
 
     player.body.allowGravity = true
 

@@ -76,3 +76,5 @@ let currentGameSpeed = minGameSpeed
 let flapSound
 let gameOverSound
 let scoreSound
+let backgroundMusic
+let flappsBackground
