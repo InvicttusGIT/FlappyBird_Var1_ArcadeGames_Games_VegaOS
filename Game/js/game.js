@@ -10,7 +10,9 @@ try {
         if (!event || event.keyCode !== 27) return
 
         try {
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            if (typeof requestExitPopupCallback === 'function') {
+                requestExitPopupCallback()
+            } else if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                 window.ReactNativeWebView.postMessage(
                     JSON.stringify({ type: 'exit-game' })
                 )
@@ -108,6 +110,11 @@ function preload() {
     this.load.image(assets.ui.playButton, 'assets/play-button.png')
     this.load.image(assets.ui.musicOn, 'assets/music-on.png')
     this.load.image(assets.ui.musicOff, 'assets/music-off.png')
+    this.load.image(assets.ui.exitPopupBg, 'assets/popup-bg.png')
+    this.load.image(assets.ui.exitHeadingImage, 'assets/Leaving the sky.png')
+    this.load.image(assets.ui.exitBirds, 'assets/birds.png')
+    this.load.image(assets.ui.exitLeaveButton, 'assets/leave-btn.png')
+    this.load.image(assets.ui.exitStayButton, 'assets/keep-playing-btn.png')
 
     // End game
     this.load.image(assets.scene.gameOver, 'assets/gameover.png')
@@ -168,6 +175,7 @@ function create() {
     rightButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT)
     upButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP)
     downButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN)
+    backButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
 
     // Ensure the canvas can receive key events on TV remotes.
     if (this.game && this.game.canvas) {
@@ -306,6 +314,18 @@ function create() {
     // --- Start screen UI (centered container) ---
     createStartScreenUI(this, scoreTextStyle)
     setStartScreenVisible(true)
+
+    // Exit popup UI (hidden by default, controlled via utils)
+    exitPopup = createExitPopup(this, {
+        popupBgKey: assets.ui.exitPopupBg,
+        birdsKey: assets.ui.exitBirds,
+        headingImageKey: assets.ui.exitHeadingImage,
+        leaveKey: assets.ui.exitLeaveButton,
+        stayKey: assets.ui.exitStayButton,
+        onLeave: sendExitGame,
+        onStay: () => { if (exitPopup) exitPopup.hide() }
+    })
+    requestExitPopupCallback = () => { if (exitPopup) exitPopup.show() }
 }
 
 // ---------------------------
@@ -368,6 +388,19 @@ function createStartScreenUI(scene, scoreTextStyle) {
     musicButtonBaseScale = musicToggleImage.scaleX
     musicToggleImage.on('pointerover', () => setStartScreenFocus('music'))
     musicToggleImage.on('pointerout', () => {})
+}
+
+function sendExitGame() {
+    try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'exit-game' }))
+            return
+        }
+    } catch (_) {}
+    // Fallback: close window if available
+    try {
+        window.close()
+    } catch (_) {}
 }
 
 function setStartScreenVisible(visible) {
@@ -482,8 +515,22 @@ function update(t, dt) {
     const rightPressed = Phaser.Input.Keyboard.JustDown(rightButton)
     const upPressed = Phaser.Input.Keyboard.JustDown(upButton)
     const downPressed = Phaser.Input.Keyboard.JustDown(downButton)
+    const backPressed = Phaser.Input.Keyboard.JustDown(backButton)
     
     const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
+
+    if (exitPopup && exitPopup.isVisible()) {
+        if (leftPressed || rightPressed) {
+            exitPopup.toggleFocus()
+        }
+        if (flapPressed) {
+            exitPopup.confirm()
+        }
+        if (backPressed) {
+            exitPopup.hide()
+        }
+        return
+    }
 
     //background image parallax effect
     if (!gameOver) {

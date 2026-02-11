@@ -9,6 +9,7 @@ let leftButton
 let rightButton
 let upButton
 let downButton
+let backButton
 let restartButton
 let gameOverBanner
 let messageInitial
@@ -78,3 +79,7 @@ let gameOverSound
 let scoreSound
 let backgroundMusic
 let flappsBackground
+
+// Exit popup
+let exitPopup
+let requestExitPopupCallback

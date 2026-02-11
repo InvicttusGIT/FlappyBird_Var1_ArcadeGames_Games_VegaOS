@@ -71,7 +71,12 @@ const assets = {
         title: 'ui-title',
         playButton: 'ui-play-button',
         musicOn: 'ui-music-on',
-        musicOff: 'ui-music-off'
+        musicOff: 'ui-music-off',
+        exitPopupBg: 'ui-exit-popup-bg',
+        exitBirds: 'ui-exit-birds',
+        exitHeadingImage: 'ui-exit-heading-image',
+        exitLeaveButton: 'ui-exit-leave-button',
+        exitStayButton: 'ui-exit-stay-button'
     },
     scoreboard: {
         width: 25,

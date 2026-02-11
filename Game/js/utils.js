@@ -51,6 +51,138 @@ function createPulseTween(scene, target, baseScale, options) {
 }
 
 /**
+ * Build the exit popup UI and return a controller with show/hide/focus helpers.
+ * @param {Phaser.Scene} scene
+ * @param {object} options
+ * @returns {object|null}
+ */
+function createExitPopup(scene, options) {
+    if (!scene) return null
+    const opts = options || {}
+    const popupWidthRatio = typeof opts.popupWidthRatio === 'number' ? opts.popupWidthRatio : 0.8
+    const popupHeightRatio = typeof opts.popupHeightRatio === 'number' ? opts.popupHeightRatio : 0.75
+    const popupBgKey = opts.popupBgKey
+    const birdsKey = opts.birdsKey
+    const headingImageKey = opts.headingImageKey
+    const leaveKey = opts.leaveKey
+    const stayKey = opts.stayKey
+    const onLeave = typeof opts.onLeave === 'function' ? opts.onLeave : null
+    const onStay = typeof opts.onStay === 'function' ? opts.onStay : null
+    const overlayAlpha = typeof opts.overlayAlpha === 'number' ? opts.overlayAlpha : 0.6
+
+    const overlay = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, overlayAlpha)
+    overlay.setDepth(190)
+    overlay.setVisible(false)
+    overlay.setScrollFactor(0)
+    overlay.setInteractive()
+
+    const container = scene.add.container(GAME_CENTER_X, GAME_HEIGHT / 2)
+    container.setDepth(200)
+    container.setVisible(false)
+
+    const popupBg = scene.add.image(0, 0, popupBgKey).setOrigin(0.5, 0.5)
+    fitImageToBox(popupBg, GAME_WIDTH * popupWidthRatio, GAME_HEIGHT * popupHeightRatio)
+
+    const popupWidth = popupBg.displayWidth
+    const popupHeight = popupBg.displayHeight
+
+    let heading = null
+    if (headingImageKey) {
+        heading = scene.add.image(0, -popupHeight * 0.32, headingImageKey).setOrigin(0.5)
+        fitImageToBox(heading, popupWidth * 0.5, popupHeight * 0.18)
+    }
+
+    const subheadingStyle = Object.assign({
+        fontFamily: 'jersey15',
+        fontSize: '24px',
+        color: '#000000',
+        align: 'center',
+    }, opts.subheadingStyle || {})
+    const subheading = scene.add.text(0, heading.y + 48, opts.subheadingText || 'Are You Sure You Want To Stop Flying?', subheadingStyle).setOrigin(0.5)
+
+    const birds = scene.add.image(0, subheading.y + 80, birdsKey).setOrigin(0.5)
+    fitImageToBox(birds, popupWidth * 0.6, popupHeight * 0.20)
+
+    const buttonsY = popupHeight * 0.28
+    const buttonOffset = popupWidth * 0.15
+    const leaveBtn = scene.add.image(-buttonOffset, buttonsY, leaveKey).setOrigin(0.5).setInteractive()
+    const stayBtn = scene.add.image(buttonOffset, buttonsY, stayKey).setOrigin(0.5).setInteractive()
+    fitImageToBox(leaveBtn, popupWidth * 0.28, popupHeight * 0.14)
+    fitImageToBox(stayBtn, popupWidth * 0.28, popupHeight * 0.14)
+
+    const leaveBase = leaveBtn.scaleX
+    const stayBase = stayBtn.scaleX
+    let leavePulse = null
+    let stayPulse = null
+    let focus = 'stay'
+    let visible = false
+
+    function stopPulses() {
+        if (leavePulse) leavePulse.stop()
+        if (stayPulse) stayPulse.stop()
+        leavePulse = null
+        stayPulse = null
+    }
+
+    function setFocus(target) {
+        focus = target === 'leave' ? 'leave' : 'stay'
+        stopPulses()
+        if (leaveBtn) leaveBtn.setScale(leaveBase)
+        if (stayBtn) stayBtn.setScale(stayBase)
+        const pulseOpts = { scale: 1.08, duration: 450 }
+        if (focus === 'leave' && leaveBtn) {
+            leavePulse = createPulseTween(scene, leaveBtn, leaveBase, pulseOpts)
+        }
+        if (focus === 'stay' && stayBtn) {
+            stayPulse = createPulseTween(scene, stayBtn, stayBase, pulseOpts)
+        }
+    }
+
+    function show() {
+        visible = true
+        overlay.setVisible(true)
+        container.setVisible(true)
+        setFocus('stay')
+    }
+
+    function hide() {
+        visible = false
+        overlay.setVisible(false)
+        container.setVisible(false)
+        stopPulses()
+    }
+
+    function toggleFocus() {
+        setFocus(focus === 'leave' ? 'stay' : 'leave')
+    }
+
+    function confirm() {
+        if (focus === 'leave') {
+            if (onLeave) onLeave()
+        } else {
+            if (onStay) onStay()
+            hide()
+        }
+    }
+
+    leaveBtn.on('pointerover', () => setFocus('leave'))
+    stayBtn.on('pointerover', () => setFocus('stay'))
+    leaveBtn.on('pointerdown', () => { setFocus('leave'); confirm() })
+    stayBtn.on('pointerdown', () => { setFocus('stay'); confirm() })
+
+    container.add([popupBg, heading, subheading, birds, leaveBtn, stayBtn])
+
+    return {
+        show,
+        hide,
+        toggleFocus,
+        confirm,
+        isVisible: () => visible,
+        getFocus: () => focus
+    }
+}
+
+/**
  * Get high score from React Native AsyncStorage via postMessage.
  * Requests the high score from the native app and returns 0 immediately.
  * The actual value will be set via message handler in game.js.
