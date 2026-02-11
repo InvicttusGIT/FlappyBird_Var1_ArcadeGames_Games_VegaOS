@@ -25,6 +25,35 @@ try {
 } catch (_) {
     // Swallow any unexpected errors in TV webview environments
 }
+
+// Listen for messages from React Native (high score updates)
+// React Native WebView can send messages via window.postMessage or document events
+try {
+    const handleNativeMessage = function (event) {
+        try {
+            // React Native WebView sends messages via event.data
+            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+            if (data && data.type === 'high-score') {
+                const receivedHighScore = typeof data.value === 'number' ? data.value : 0
+                if (highScore === undefined || receivedHighScore > highScore) {
+                    highScore = receivedHighScore
+                    runHighScoreBaseline = highScore
+                    // Update display if game is already initialized
+                    if (highScoreText !== undefined) {
+                        updateHighScoreDisplay()
+                    }
+                }
+            }
+        } catch (e) {
+            // Silently ignore parse errors
+        }
+    }
+
+    // Listen for messages from React Native (high score updates) via MessageEvent.
+    window.addEventListener('message', handleNativeMessage)
+} catch (_) {
+    // Swallow any unexpected errors in TV webview environments
+}
 /**
  *   Load the game assets.
  */
@@ -820,9 +849,11 @@ function prepareGame(scene) {
     isDayTheme = true
     currentPipe = assets.obstacle.pipe.green
     score = 0
-    // Load high score from localStorage on game start
+    // Request high score from React Native AsyncStorage
+    // Initialize to 0 if undefined, will be updated via message handler
     if (highScore === undefined) {
-        highScore = getHighScore()
+        highScore = 0
+        getHighScore() // Request high score from native app
     }
     runHighScoreBaseline = highScore
     currentVelocity = minVelocity

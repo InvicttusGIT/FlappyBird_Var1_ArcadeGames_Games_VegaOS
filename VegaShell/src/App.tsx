@@ -5,26 +5,33 @@ import {
   useHideSplashScreenCallback,
   usePreventHideSplashScreen,
 } from "@amazon-devices/react-native-kepler";
+import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridge";
 
 export const App = () => {
   usePreventHideSplashScreen();
   const hideSplashScreenCallback = useHideSplashScreenCallback();
-  const webRef = useRef(null);
+  const webRef = useRef<any>(null);
 
-  const handleWebViewMessage = useCallback((event: any) => {
+  const handleWebViewMessage = useCallback(async (event: any) => {
+    // Exit app (Vega back button)
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data && data.type === "exit-game") {
         BackHandler.exitApp();
         return;
       }
-    } catch (e) {
-      // Non-JSON messages can be ignored
+    } catch {
+      // Ignore non‑JSON / malformed messages
     }
+
+    // High‑score bridge (AsyncStorage + injectJavaScript)
+    await handleHighScoreMessage(event, webRef);
   }, []);
 
   const handleWebViewLoaded = useCallback(() => {
     hideSplashScreenCallback();
+    // Send high score to WebView when it's loaded
+    sendHighScoreToWebView(webRef);
   }, [hideSplashScreenCallback]);
   return (
     <View style={styles.container}>
