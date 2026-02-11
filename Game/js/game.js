@@ -316,16 +316,32 @@ function create() {
     setStartScreenVisible(true)
 
     // Exit popup UI (hidden by default, controlled via utils)
-    exitPopup = createExitPopup(this, {
+    const scene = this
+    exitPopup = createExitPopup(scene, {
         popupBgKey: assets.ui.exitPopupBg,
         birdsKey: assets.ui.exitBirds,
         headingImageKey: assets.ui.exitHeadingImage,
         leaveKey: assets.ui.exitLeaveButton,
         stayKey: assets.ui.exitStayButton,
         onLeave: sendExitGame,
-        onStay: () => { if (exitPopup) exitPopup.hide() }
+        onStay: () => {
+            if (exitPopup) exitPopup.hide()
+            if (exitPopupPausedGame) {
+                scene.physics.resume()
+                moveBird()
+                exitPopupPausedGame = false
+            }
+        }
     })
-    requestExitPopupCallback = () => { if (exitPopup) exitPopup.show() }
+    requestExitPopupCallback = () => {
+        if (!exitPopup) return
+        if (exitPopup.isVisible()) return
+        if (gameStarted && !gameOver && !exitPopupPausedGame) {
+            scene.physics.pause()
+            exitPopupPausedGame = true
+        }
+        exitPopup.show()
+    }
 }
 
 // ---------------------------

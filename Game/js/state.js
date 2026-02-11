@@ -83,3 +83,4 @@ let flappsBackground
 // Exit popup
 let exitPopup
 let requestExitPopupCallback
+let exitPopupPausedGame = false
