@@ -164,7 +164,7 @@ function create() {
 
     groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground.day)
     groundCollider.setVisible(false)
-    groundCollider.setSize(GAME_WIDTH, 105, true)
+    groundCollider.setSize(GAME_WIDTH, 108, true)
 
     messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
     messageInitial.setDepth(30)
@@ -759,14 +759,12 @@ function makePipes(scene) {
     gap.visible = false
 
     const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
-    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height-10
-
-    )
+    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height-8)
 
     pipeTop.body.allowGravity = false
 
     const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + verticalGap, currentPipe.bottom)
-    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height-10 )
+    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height-8 )
     pipeBottom.body.allowGravity = false
 }
 
@@ -933,7 +931,7 @@ function prepareGame(scene) {
 
     birdName = getRandomBird()
     player = scene.physics.add.sprite(100, 250, birdName)
-    player.body.setCircle(14, 2, -1)
+    player.body.setCircle(12, 6, 2)
     player.setCollideWorldBounds(true)
     player.anims.play(getAnimationBird(birdName).clapWings, true)
     player.body.allowGravity = false
