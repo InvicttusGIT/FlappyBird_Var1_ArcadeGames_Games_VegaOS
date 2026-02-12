@@ -106,7 +106,7 @@ function preload() {
 
     // Start game
     this.load.image(assets.scene.messageInitial, 'assets/message-initial.png')
-    this.load.image(assets.ui.title, 'assets/FlapDash.png')
+    this.load.image(assets.ui.title, 'assets/FlappyWings.png')
     this.load.image(assets.ui.playButton, 'assets/play-button.png')
     this.load.image(assets.ui.musicOn, 'assets/music-on.png')
     this.load.image(assets.ui.musicOff, 'assets/music-off.png')
@@ -254,7 +254,7 @@ function create() {
     prepareGame(this)
 
     gameOverBanner = this.add.image(assets.scene.width, 206, assets.scene.gameOver)
-    // Match the start screen FlapDash size (same max box)
+    // Match the start screen FlappyWings size (same max box)
     fitImageToBox(gameOverBanner, 400, 200)
     gameOverBanner.setDepth(20)
     gameOverBanner.visible = false
@@ -353,12 +353,12 @@ function createStartScreenUI(scene, scoreTextStyle) {
     startUiContainer = scene.add.container(GAME_CENTER_X, GAME_HEIGHT / 2)
     startUiContainer.setDepth(50)
 
-    startTitleImage = scene.add.image(0, -70, assets.ui.title)
+    startTitleImage = scene.add.image(0, -50, assets.ui.title)
     startTitleImage.setOrigin(0.5, 0.5)
-    // FlapDash target size: fit within ~250w x 150h
-    fitImageToBox(startTitleImage, 400, 200)
+    // FlappyWings target size: fit within ~500w x 250h
+    fitImageToBox(startTitleImage, 500, 250)
 
-    playButtonImage = scene.add.image(0, 40, assets.ui.playButton).setInteractive()
+    playButtonImage = scene.add.image(0, 30, assets.ui.playButton).setInteractive()
     playButtonImage.setOrigin(0.5, 0.5)
     // Play button size control (tweak as desired)
     fitImageToBox(playButtonImage, 200, 100)
@@ -368,11 +368,11 @@ function createStartScreenUI(scene, scoreTextStyle) {
     // Hint text (only visible when play button is focused)
     playHintText = scene.add.text(
         0,
-        120,
+        80,
         'PRESS "OK" TO FLY',
         {
             fontFamily: scoreTextStyle.fontFamily || 'jersey15',
-            fontSize: '22px',
+            fontSize: '28px',
             color: SCORE_BLUE_COLOR,
             stroke: SCORE_WHITE_COLOR,
             strokeThickness: 6,
@@ -393,7 +393,7 @@ function createStartScreenUI(scene, scoreTextStyle) {
     })
 
     // Music toggle icon (top-right, same placement as high score numbers)
-    musicToggleImage = scene.add.image(GAME_WIDTH - 40, 10, assets.ui.musicOn).setOrigin(1, 0).setInteractive()
+    musicToggleImage = scene.add.image(GAME_WIDTH - 50, 30, assets.ui.musicOn).setOrigin(1, 0).setInteractive()
     musicToggleImage.setDepth(60)
     musicToggleImage.on('pointerdown', () => {
         setStartScreenFocus('music')
