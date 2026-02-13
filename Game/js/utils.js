@@ -233,7 +233,7 @@ function playAdVideo() {
 
     // Mute all game audio while the ad plays
     try {
-        if (game && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
+        if (game && isMusicOn && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
             game.scene.scenes[0].sound.mute = true
         }
     } catch (_) {}
@@ -249,7 +249,7 @@ function playAdVideo() {
         video.style.display = 'none'
         // Unmute game audio
         try {
-            if (game && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
+            if (game && isMusicOn && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
                 game.scene.scenes[0].sound.mute = false
             }
         } catch (_) {}
