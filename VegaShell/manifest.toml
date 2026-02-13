@@ -46,6 +46,9 @@ id = "com.amazon.mediatransform.service"
 [[wants.service]]
 id = "com.amazon.audio.system"
 
+[[wants.service]]
+id = "com.amazon.media.server"
+
 [offers]
 [[offers.service]]
 id = "com.amazon.gipc.uuid.*"

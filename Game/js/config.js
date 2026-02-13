@@ -65,7 +65,6 @@ const assets = {
         },
         gameOver: 'game-over',
         restart: 'restart-button',
-        messageInitial: 'message-initial'
     },
     ui: {
         title: 'ui-title',

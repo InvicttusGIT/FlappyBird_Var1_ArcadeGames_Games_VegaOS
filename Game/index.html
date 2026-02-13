@@ -18,5 +18,22 @@
 </head>
 <body>
     <div id="game-container"></div>
+
+    <!-- Full-screen video overlay for in-game ads. Hidden by default. -->
+    <video
+        id="ad-video"
+        src="https://www.shutterstock.com/shutterstock/videos/3901461395/preview/stock-footage--second-countdown-timer-on-black-background.webm"
+        style="
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+            display: none;
+            z-index: 9999;
+        "
+        playsinline
+    ></video>
 </body>
 </html>

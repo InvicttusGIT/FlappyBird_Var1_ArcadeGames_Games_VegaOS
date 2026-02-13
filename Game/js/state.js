@@ -62,6 +62,12 @@ let runHighScoreBaseline = 0
 let highScoreText
 let highScoreLabelText
 
+// Crash counter (used to trigger in-game ad video)
+let crashCount = 0
+
+// True while the in-game ad video overlay is playing
+let adPlaying = false
+
 let currentVelocity = minVelocity
 let isDayTheme = true
 

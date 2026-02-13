@@ -105,7 +105,6 @@ function preload() {
     this.load.audio('flappsBackground', 'assets/audio/flapps.mp3')
 
     // Start game
-    this.load.image(assets.scene.messageInitial, 'assets/message-initial.png')
     this.load.image(assets.ui.title, 'assets/FlappyWings.png')
     this.load.image(assets.ui.playButton, 'assets/play-button.png')
     this.load.image(assets.ui.musicOn, 'assets/music-on.png')
@@ -535,6 +534,11 @@ function update(t, dt) {
     
     const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
 
+    // If an in-game ad video is playing, freeze all gameplay & input.
+    if (adPlaying) {
+        return
+    }
+
     if (exitPopup && exitPopup.isVisible()) {
         if (leftPressed || rightPressed) {
             exitPopup.toggleFocus()
@@ -635,6 +639,9 @@ function hitBird(player) {
     gameOver = true
     gameStarted = false
 
+    // Count crashes so we can trigger in-game ad video
+    crashCount++
+
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
 
@@ -676,7 +683,12 @@ function hitBird(player) {
 
     // Update and display high score
     updateHighScoreDisplay()
+
+    // After every crash, play the in-game full-screen ad video.
+    // Later we can change this to every 3 crashes (crashCount % 3 === 0).
+    playAdVideo()
 }
+
 
 /**
  *   Update the scoreboard.
@@ -873,6 +885,8 @@ function updateHighScoreDisplay() {
  * Clean all groups, hide game over objects and stop game physics.
  */
 function restartGame() {
+    // Do not allow restarting while an ad video is playing
+    if (adPlaying) return
     restartEnabled = false
     pipesGroup.clear(true, true)
     pipesGroup.clear(true, true)

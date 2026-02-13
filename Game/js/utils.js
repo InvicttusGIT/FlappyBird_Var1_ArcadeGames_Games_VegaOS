@@ -219,3 +219,66 @@ function saveHighScore(newHighScore) {
         // Silently fail if bridge is not available
     }
 }
+
+/**
+ * Show the full-screen ad video overlay and block game input while it plays.
+ * Uses the <video id="ad-video"> element defined in index.html.
+ */
+function playAdVideo() {
+    const video = document.getElementById('ad-video')
+    if (!video) return
+
+    // Mark ad as playing so update/restart are gated
+    adPlaying = true
+
+    // Mute all game audio while the ad plays
+    try {
+        if (game && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
+            game.scene.scenes[0].sound.mute = true
+        }
+    } catch (_) {}
+
+    // Reset playback and show overlay
+    try {
+        video.currentTime = 0
+    } catch (_) {}
+    video.style.display = 'block'
+
+    const cleanup = () => {
+        // Hide overlay
+        video.style.display = 'none'
+        // Unmute game audio
+        try {
+            if (game && game.scene && game.scene.scenes[0] && game.scene.scenes[0].sound) {
+                game.scene.scenes[0].sound.mute = false
+            }
+        } catch (_) {}
+        // Stop gating input
+        adPlaying = false
+        video.removeEventListener('ended', onEnded)
+        video.removeEventListener('error', onError)
+    }
+
+    const onEnded = () => {
+        cleanup()
+    }
+    const onError = () => {
+        cleanup()
+    }
+
+    // Attach one-shot listeners
+    video.addEventListener('ended', onEnded)
+    video.addEventListener('error', onError)
+
+    // Start playback (best-effort; if browser blocks autoplay we just clean up)
+    try {
+        const playPromise = video.play()
+        if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.catch(() => {
+                cleanup()
+            })
+        }
+    } catch (_) {
+        cleanup()
+    }
+}
