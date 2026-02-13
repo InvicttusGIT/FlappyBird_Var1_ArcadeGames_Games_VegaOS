@@ -223,8 +223,14 @@ function saveHighScore(newHighScore) {
 /**
  * Show the full-screen ad video overlay and block game input while it plays.
  * Uses the <video id="ad-video"> element defined in index.html.
+ *
+ * Flow:
+ *  - Build Adtelligent URL via CtvAds.buildCtvTagUrl using CtvAdsConfig defaults.
+ *  - Fetch VAST, parse via CtvAds.parseCtvVastResponse, follow wrappers until inline MediaFile.
+ *  - Set video.src to the resolved mediaUrl and play the ad.
+ *  - Log the formed URL and when each VAST level is parsed.
  */
-function playAdVideo() {
+async function playAdVideo() {
     const video = document.getElementById('ad-video')
     if (!video) return
 
@@ -238,10 +244,7 @@ function playAdVideo() {
         }
     } catch (_) {}
 
-    // Reset playback and show overlay
-    try {
-        video.currentTime = 0
-    } catch (_) {}
+    // Show overlay (black) while we resolve the ad URL
     video.style.display = 'block'
 
     const cleanup = () => {
@@ -269,6 +272,65 @@ function playAdVideo() {
     // Attach one-shot listeners
     video.addEventListener('ended', onEnded)
     video.addEventListener('error', onError)
+
+    let mediaUrl = null
+
+    try {
+        if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
+            console.log('[CTV] CtvAds parser not available, falling back to built-in video src')
+        } else {
+            const cfg = window.CtvAdsConfig || {}
+            const params = {
+                width: cfg.defaultWidth,
+                height: cfg.defaultHeight,
+                userAgent: cfg.defaultUserAgent || navigator.userAgent,
+                appName: cfg.defaultAppName,
+                appBundle: cfg.defaultAppBundle,
+                deviceCategory: cfg.defaultDeviceCategory,
+                deviceId: cfg.defaultDeviceId,
+                vastVersion: cfg.defaultVastVersion,
+                aid: cfg.defaultAid
+            }
+
+            const tagUrl = window.CtvAds.buildCtvTagUrl(params)
+            console.log('[CTV] formed ad tag URL:', tagUrl)
+
+            const maxDepth = (cfg.maxWrapperDepth || 5)
+            let currentUrl = tagUrl
+            let depth = 0
+
+            while (currentUrl && depth < maxDepth && !mediaUrl) {
+                console.log('[CTV] fetching VAST depth', depth, 'url=', currentUrl)
+                const response = await fetch(currentUrl)
+                const xmlText = await response.text()
+                const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
+                console.log('[CTV] parsed VAST depth', depth, 'result:', parsed)
+
+                if (parsed.mediaUrl) {
+                    mediaUrl = parsed.mediaUrl
+                    break
+                }
+                currentUrl = parsed.nextTagUrl
+                depth++
+            }
+        }
+    } catch (e) {
+        console.log('[CTV] error while resolving VAST chain', e)
+    }
+
+    if (!mediaUrl) {
+        console.log('[CTV] no mediaUrl resolved from VAST, using existing video src')
+    } else {
+        try {
+            // Reset playback and apply resolved media URL
+            video.pause()
+            video.src = mediaUrl
+            video.load()
+            console.log('[CTV] final mediaUrl for ad video:', mediaUrl)
+        } catch (e) {
+            console.log('[CTV] error applying mediaUrl to video element', e)
+        }
+    }
 
     // Start playback (best-effort; if browser blocks autoplay we just clean up)
     try {
