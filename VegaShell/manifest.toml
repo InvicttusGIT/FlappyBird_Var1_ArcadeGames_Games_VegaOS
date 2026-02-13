@@ -1,13 +1,13 @@
 schema-version = 1
 
 [package]
-title = "FlappyBird"
-version = "0.1.0"
-id = "com.invicttusx.flappybird"
+title = "Flappy Wings"
+version = "1.0.0"
+id = "com.invicttusx.flappywings_v1_ag_game_vega"
 
 [components]
 [[components.interactive]]
-id = "com.invicttusx.flappybird.main"
+id = "com.invicttusx.flappywings_v1_ag_game_vega.main"
 runtime-module = "/com.amazon.kepler.keplerscript.runtime.loader_2@IKeplerScript_2_0"
 launch-type = "singleton"
 categories = ["com.amazon.category.main"]
