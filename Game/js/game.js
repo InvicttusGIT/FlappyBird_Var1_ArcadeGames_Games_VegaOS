@@ -686,7 +686,9 @@ function hitBird(player) {
 
     // After every crash, play the in-game full-screen ad video.
     // Later we can change this to every 3 crashes (crashCount % 3 === 0).
-    playAdVideo()
+    setTimeout(()=>{
+        playAdVideo()
+    }, gameOverShakeDurationMs)
 }
 
 
