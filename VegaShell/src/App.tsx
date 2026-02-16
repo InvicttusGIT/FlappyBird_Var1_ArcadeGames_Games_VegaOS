@@ -5,6 +5,7 @@ import {
   useHideSplashScreenCallback,
   usePreventHideSplashScreen,
 } from "@amazon-devices/react-native-kepler";
+import DeviceInfo from "@amazon-devices/react-native-device-info";
 import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridge";
 
 export const App = () => {
@@ -20,6 +21,33 @@ export const App = () => {
         BackHandler.exitApp();
         return;
       }
+      
+      // Device ID request for CTV ads (only for non-premium users)
+      if (data && data.type === "get-device-id") {
+        const deviceId = DeviceInfo.getDeviceId();
+        if (webRef.current && typeof webRef.current.injectJavaScript === "function") {
+          // Send device ID if available, otherwise send null (will use default UUID in parser)
+          const json = JSON.stringify({ type: "device-id", value: deviceId || null });
+          const escaped = json
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r");
+          webRef.current.injectJavaScript(`
+            (function() {
+              try {
+                const data = JSON.parse('${escaped}');
+                const event = new MessageEvent('message', { data: data });
+                window.dispatchEvent(event);
+                document.dispatchEvent(event);
+              } catch(e) {
+                // Swallow errors on device
+              }
+            })();
+          `);
+        }
+        return;
+      }
     } catch {
       // Ignore non‑JSON / malformed messages
     }
@@ -33,6 +61,8 @@ export const App = () => {
     // Send high score to WebView when it's loaded
     sendHighScoreToWebView(webRef);
   }, [hideSplashScreenCallback]);
+
+
   return (
     <View style={styles.container}>
       <WebView
