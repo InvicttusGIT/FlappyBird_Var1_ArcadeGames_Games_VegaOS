@@ -221,16 +221,109 @@ function saveHighScore(newHighScore) {
 }
 
 /**
+ * Request device ID from React Native app via postMessage.
+ * The device ID will be sent back via message handler in game.js.
+ */
+function requestDeviceId() {
+    try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: 'get-device-id' })
+            )
+        }
+    } catch (e) {
+        // Silently fail if bridge is not available
+    }
+}
+
+/**
+ * Pre-fetch the ad video URL after 2 crashes to minimize delay on 3rd crash.
+ * This function is called after device ID is received from native app.
+ * Only works for non-premium users.
+ */
+async function preFetchAdVideo() {
+    if (isPremiumUser) {
+        console.log('[CTV] premium user, skipping ad pre-fetch')
+        return
+    }
+
+    if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
+        console.log('[CTV] CtvAds parser not available, cannot pre-fetch ad')
+        return
+    }
+
+    // Use device ID if available, otherwise use default UUID format (not 'unknown_device')
+    // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
+    const cfg = window.CtvAdsConfig || {}
+    const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
+    console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
+
+    try {
+        const params = {
+            width: cfg.defaultWidth,
+            height: cfg.defaultHeight,
+            userAgent: cfg.defaultUserAgent || navigator.userAgent,
+            appName: cfg.defaultAppName,
+            appBundle: cfg.defaultAppBundle,
+            deviceCategory: cfg.defaultDeviceCategory,
+            deviceId: deviceIdToUse, // Use the device ID from native app or default UUID
+            vastVersion: cfg.defaultVastVersion,
+            aid: cfg.defaultAid
+        }
+
+        const tagUrl = window.CtvAds.buildCtvTagUrl(params)
+        console.log('[CTV] pre-fetching ad, formed tag URL:', tagUrl)
+
+        const maxDepth = (cfg.maxWrapperDepth || 5)
+        let currentUrl = tagUrl
+        let depth = 0
+        let mediaUrl = null
+
+        while (currentUrl && depth < maxDepth && !mediaUrl) {
+            console.log('[CTV] pre-fetch VAST depth', depth, 'url=', currentUrl)
+            const response = await fetch(currentUrl)
+            const xmlText = await response.text()
+            const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
+            console.log('[CTV] pre-fetch parsed VAST depth', depth, 'result:', parsed)
+
+            if (parsed.mediaUrl) {
+                mediaUrl = parsed.mediaUrl
+                cachedAdMediaUrl = mediaUrl
+                console.log('[CTV] pre-fetched ad media URL cached:', mediaUrl)
+                break
+            }
+            currentUrl = parsed.nextTagUrl
+            depth++
+        }
+
+        if (!mediaUrl) {
+            console.log('[CTV] pre-fetch failed: no mediaUrl resolved from VAST chain')
+            cachedAdMediaUrl = null
+        }
+    } catch (e) {
+        console.log('[CTV] error during ad pre-fetch', e)
+        cachedAdMediaUrl = null
+    }
+}
+
+/**
  * Show the full-screen ad video overlay and block game input while it plays.
  * Uses the <video id="ad-video"> element defined in index.html.
+ * Only works for non-premium users.
  *
  * Flow:
- *  - Build Adtelligent URL via CtvAds.buildCtvTagUrl using CtvAdsConfig defaults.
+ *  - If cachedAdMediaUrl is available (pre-fetched), use it immediately.
+ *  - Otherwise, build Adtelligent URL via CtvAds.buildCtvTagUrl using device ID from native app.
  *  - Fetch VAST, parse via CtvAds.parseCtvVastResponse, follow wrappers until inline MediaFile.
  *  - Set video.src to the resolved mediaUrl and play the ad.
  *  - Log the formed URL and when each VAST level is parsed.
  */
 async function playAdVideo() {
+    if (isPremiumUser) {
+        console.log('[CTV] premium user, skipping ad playback')
+        return
+    }
+
     const video = document.getElementById('ad-video')
     if (!video) return
 
@@ -258,6 +351,8 @@ async function playAdVideo() {
         } catch (_) {}
         // Stop gating input
         adPlaying = false
+        // Clear cached URL after playing (will be re-fetched for next ad)
+        cachedAdMediaUrl = null
         video.removeEventListener('ended', onEnded)
         video.removeEventListener('error', onError)
     }
@@ -273,49 +368,58 @@ async function playAdVideo() {
     video.addEventListener('ended', onEnded)
     video.addEventListener('error', onError)
 
-    let mediaUrl = null
+    let mediaUrl = cachedAdMediaUrl // Use pre-fetched URL if available
 
-    try {
-        if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
-            console.log('[CTV] CtvAds parser not available, falling back to built-in video src')
-        } else {
-            const cfg = window.CtvAdsConfig || {}
-            const params = {
-                width: cfg.defaultWidth,
-                height: cfg.defaultHeight,
-                userAgent: cfg.defaultUserAgent || navigator.userAgent,
-                appName: cfg.defaultAppName,
-                appBundle: cfg.defaultAppBundle,
-                deviceCategory: cfg.defaultDeviceCategory,
-                deviceId: cfg.defaultDeviceId,
-                vastVersion: cfg.defaultVastVersion,
-                aid: cfg.defaultAid
-            }
-
-            const tagUrl = window.CtvAds.buildCtvTagUrl(params)
-            console.log('[CTV] formed ad tag URL:', tagUrl)
-
-            const maxDepth = (cfg.maxWrapperDepth || 5)
-            let currentUrl = tagUrl
-            let depth = 0
-
-            while (currentUrl && depth < maxDepth && !mediaUrl) {
-                console.log('[CTV] fetching VAST depth', depth, 'url=', currentUrl)
-                const response = await fetch(currentUrl)
-                const xmlText = await response.text()
-                const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
-                console.log('[CTV] parsed VAST depth', depth, 'result:', parsed)
-
-                if (parsed.mediaUrl) {
-                    mediaUrl = parsed.mediaUrl
-                    break
+    // If we have a cached URL, use it immediately (pre-fetched after 2 crashes)
+    if (mediaUrl) {
+        console.log('[CTV] using pre-fetched ad media URL:', mediaUrl)
+    } else {
+        // Otherwise, fetch it now (fallback or first time)
+        try {
+            if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
+                console.log('[CTV] CtvAds parser not available, falling back to built-in video src')
+            } else {
+                const cfg = window.CtvAdsConfig || {}
+                // Use device ID from native app if available, otherwise use default UUID format
+                // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
+                const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
+                const params = {
+                    width: cfg.defaultWidth,
+                    height: cfg.defaultHeight,
+                    userAgent: cfg.defaultUserAgent || navigator.userAgent,
+                    appName: cfg.defaultAppName,
+                    appBundle: cfg.defaultAppBundle,
+                    deviceCategory: cfg.defaultDeviceCategory,
+                    deviceId: deviceIdToUse,
+                    vastVersion: cfg.defaultVastVersion,
+                    aid: cfg.defaultAid
                 }
-                currentUrl = parsed.nextTagUrl
-                depth++
+
+                const tagUrl = window.CtvAds.buildCtvTagUrl(params)
+                console.log('[CTV] formed ad tag URL:', tagUrl)
+
+                const maxDepth = (cfg.maxWrapperDepth || 5)
+                let currentUrl = tagUrl
+                let depth = 0
+
+                while (currentUrl && depth < maxDepth && !mediaUrl) {
+                    console.log('[CTV] fetching VAST depth', depth, 'url=', currentUrl)
+                    const response = await fetch(currentUrl)
+                    const xmlText = await response.text()
+                    const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
+                    console.log('[CTV] parsed VAST depth', depth, 'result:', parsed)
+
+                    if (parsed.mediaUrl) {
+                        mediaUrl = parsed.mediaUrl
+                        break
+                    }
+                    currentUrl = parsed.nextTagUrl
+                    depth++
+                }
             }
+        } catch (e) {
+            console.log('[CTV] error while resolving VAST chain', e)
         }
-    } catch (e) {
-        console.log('[CTV] error while resolving VAST chain', e)
     }
 
     if (!mediaUrl) {

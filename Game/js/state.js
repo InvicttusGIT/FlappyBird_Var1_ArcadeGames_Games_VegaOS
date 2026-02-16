@@ -62,11 +62,20 @@ let runHighScoreBaseline = 0
 let highScoreText
 let highScoreLabelText
 
+// Premium user flag (hardcoded for now, will be set via IAP later)
+let isPremiumUser = false
+
 // Crash counter (used to trigger in-game ad video)
 let crashCount = 0
 
 // True while the in-game ad video overlay is playing
 let adPlaying = false
+
+// Cached ad media URL (pre-fetched after 2 crashes, used on 3rd crash)
+let cachedAdMediaUrl = null
+
+// Device ID from native app (requested once on app launch, constant for device)
+let deviceId = null
 
 let currentVelocity = minVelocity
 let isDayTheme = true

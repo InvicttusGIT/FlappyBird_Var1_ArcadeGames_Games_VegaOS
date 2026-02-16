@@ -58,8 +58,11 @@
             url.searchParams.set('app_store_url', params.appStoreUrl || params.app_store_url);
         }
 
-        if (params.deviceId || params.device_id) {
-            url.searchParams.set('device_id', params.deviceId || params.device_id);
+        // Only set device_id if it's a valid UUID format (not 'unknown_device')
+        // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
+        var deviceIdValue = params.deviceId || params.device_id;
+        if (deviceIdValue && deviceIdValue !== 'unknown_device') {
+            url.searchParams.set('device_id', deviceIdValue);
         }
 
         if (vastVersion) {
@@ -166,8 +169,9 @@
     // ---- Internal helpers ---------------------------------------------------
 
     function randomCacheBuster() {
-        // Similar to UUID without hyphens
-        return Math.random().toString(36).slice(2) + Date.now().toString(36);
+        // Cache buster should be a numeric timestamp (milliseconds since epoch)
+        // Sample: 1691938475123
+        return Date.now();
     }
 
     function emptyResult() {

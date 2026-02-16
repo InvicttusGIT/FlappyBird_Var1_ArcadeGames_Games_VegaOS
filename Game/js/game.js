@@ -46,6 +46,19 @@ try {
                     }
                 }
             }
+            
+            // Device ID from native app (requested when needed for ad pre-fetch)
+            if (data && data.type === 'device-id') {
+                // Store device ID if provided, otherwise keep it null (will use default UUID in parser)
+                deviceId = data.value || null
+                console.log('[CTV] received device ID:', deviceId || 'null (will use default UUID)')
+                
+                // If we're on a crash count that's a multiple of 2, trigger ad pre-fetch now that we have device ID
+                // This handles cases where device ID was requested on crash 2, 4, 6, etc.
+                if (!isPremiumUser && crashCount % 2 === 0 && crashCount > 0) {
+                    preFetchAdVideo()
+                }
+            }
         } catch (e) {
             // Silently ignore parse errors
         }
@@ -621,7 +634,7 @@ function update(t, dt) {
     gapsGroup.children.iterate(function (child) {
         child.body.setVelocityX(-currentGameSpeed)
     })
-    
+
     pipeTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
     if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
         makePipes(game.scene.scenes[0])
@@ -684,11 +697,33 @@ function hitBird(player) {
     // Update and display high score
     updateHighScoreDisplay()
 
-    // After every crash, play the in-game full-screen ad video.
-    // Later we can change this to every 3 crashes (crashCount % 3 === 0).
-    setTimeout(()=>{
-        playAdVideo()
-    }, gameOverShakeDurationMs)
+    // Only show ads for non-premium users
+    if (!isPremiumUser) {
+        // After every 2 crashes (2, 4, 6, 8, etc.), pre-fetch the ad media URL
+        if (crashCount % 2 === 0 && crashCount > 0) {
+            // Check if we have device ID, if not request it first
+            if (!deviceId) {
+                console.log('[CTV] requesting device ID for ad pre-fetch (crash', crashCount, ')')
+                requestDeviceId()
+                // preFetchAdVideo() will be called when device ID is received (in message handler)
+            } else {
+                // Device ID already available, pre-fetch immediately
+                preFetchAdVideo()
+            }
+        }
+        
+        // After every 3 crashes (3, 6, 9, 12, etc.), play the cached ad video
+        if (crashCount % 3 === 0 && crashCount > 0) {
+            // Only play if we have a cached media URL
+            if (cachedAdMediaUrl) {
+                setTimeout(()=>{
+                    playAdVideo()
+                }, gameOverShakeDurationMs)
+            } else {
+                console.log('[CTV] no cached ad media URL available, skipping ad playback (crash', crashCount, ')')
+            }
+        }
+    }
 }
 
 
@@ -700,7 +735,7 @@ function hitBird(player) {
 function updateScore(_, gap) {
     score++
     gap.destroy()
-    
+
     if (score > 0 && score % scoreToChangeLevel === 0)
         advanceLevel()
     if (scoreSound) {
@@ -791,7 +826,7 @@ function moveBird() {
 
     if (!gameStarted)
         startGame(game.scene.scenes[0])
-    
+
     currentVelocity = upwardVelocity
     player.setVelocityY(currentVelocity)
     player.angle = -20
