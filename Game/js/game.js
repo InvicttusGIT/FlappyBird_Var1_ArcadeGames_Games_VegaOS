@@ -285,18 +285,6 @@ function create() {
     restartButton.visible = false
     restartButtonBaseScale = restartButton.scaleX
 
-    // Dummy Remove Ads button on game over screen (opens remove-ads popup)
-    removeAdsGameOverButton = this.add.image(assets.scene.width, 360, assets.ui.removeAdsGoAdFreeButton).setInteractive()
-    fitImageToBox(removeAdsGameOverButton, 200, 80)
-    removeAdsGameOverButton.setDepth(20)
-    removeAdsGameOverButton.visible = false
-    removeAdsGameOverButton.on('pointerdown', () => {
-        if (removeAdsPopup) {
-            console.log('[IAP] Game-over Remove Ads button clicked, showing remove-ads popup')
-            removeAdsPopup.show()
-        }
-    })
-
     // Score text style with blue color and white stroke (reused for UI copy)
     const scoreTextStyle = {
         fontFamily: 'jersey15',
@@ -725,7 +713,6 @@ function hitBird(player) {
     }
     restartEnabled = false
     if (restartButton) restartButton.disableInteractive()
-    if (removeAdsGameOverButton) removeAdsGameOverButton.visible = true
     setRestartPulse(this, false)
     restartEnableTimer = this.time.delayedCall(gameOverShakeDurationMs, () => {
         if (!restartButton) return
@@ -978,7 +965,6 @@ function restartGame() {
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
-    if (removeAdsGameOverButton) removeAdsGameOverButton.visible = false
     if (restartEnableTimer) {
         restartEnableTimer.remove(false)
         restartEnableTimer = null

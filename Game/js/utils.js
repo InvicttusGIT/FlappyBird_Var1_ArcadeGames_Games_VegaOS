@@ -354,6 +354,17 @@ async function playAdVideo() {
         adPlaying = false
         // Clear cached URL after playing (will be re-fetched for next ad)
         cachedAdMediaUrl = null
+
+        // After an ad finishes, show the Remove Ads popup (if available).
+        try {
+            if (!isPremiumUser && typeof removeAdsPopup !== 'undefined' && removeAdsPopup && typeof removeAdsPopup.show === 'function') {
+                console.log('[IAP] Showing remove-ads popup after CTV ad finished')
+                removeAdsPopup.show()
+            }
+        } catch (e) {
+            console.log('[IAP] Error while showing remove-ads popup after ad', e)
+        }
+
         video.removeEventListener('ended', onEnded)
         video.removeEventListener('error', onError)
     }

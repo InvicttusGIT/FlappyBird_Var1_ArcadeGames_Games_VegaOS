@@ -11,7 +11,6 @@ let upButton
 let downButton
 let backButton
 let restartButton
-let removeAdsGameOverButton
 let gameOverBanner
 let messageInitial
 
