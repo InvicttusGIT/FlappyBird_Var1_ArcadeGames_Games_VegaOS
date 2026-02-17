@@ -75,7 +75,13 @@ const assets = {
         exitBirds: 'ui-exit-birds',
         exitHeadingImage: 'ui-exit-heading-image',
         exitLeaveButton: 'ui-exit-leave-button',
-        exitStayButton: 'ui-exit-stay-button'
+        exitStayButton: 'ui-exit-stay-button',
+
+        // Remove-ads popup UI
+        removeAdsHeadingImage: 'ui-remove-ads-heading-image',
+        removeAdsPriceImage: 'ui-remove-ads-price-image',
+        removeAdsNotNowButton: 'ui-remove-ads-not-now-button',
+        removeAdsGoAdFreeButton: 'ui-remove-ads-go-ad-free-button'
     },
     scoreboard: {
         width: 25,

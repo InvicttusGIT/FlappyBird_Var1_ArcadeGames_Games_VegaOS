@@ -119,18 +119,24 @@ function preload() {
 
     // Start game
     this.load.image(assets.ui.title, 'assets/FlappyWings.png')
-    this.load.image(assets.ui.playButton, 'assets/play-button.png')
-    this.load.image(assets.ui.musicOn, 'assets/music-on.png')
-    this.load.image(assets.ui.musicOff, 'assets/music-off.png')
+    this.load.image(assets.ui.playButton, 'assets/btns/play-button.png')
+    this.load.image(assets.ui.musicOn, 'assets/btns/music-on.png')
+    this.load.image(assets.ui.musicOff, 'assets/btns/music-off.png')
     this.load.image(assets.ui.exitPopupBg, 'assets/popup-bg.png')
     this.load.image(assets.ui.exitHeadingImage, 'assets/Leaving the sky.png')
     this.load.image(assets.ui.exitBirds, 'assets/birds.png')
-    this.load.image(assets.ui.exitLeaveButton, 'assets/leave-btn.png')
-    this.load.image(assets.ui.exitStayButton, 'assets/keep-playing-btn.png')
+    this.load.image(assets.ui.exitLeaveButton, 'assets/btns/leave-btn.png')
+    this.load.image(assets.ui.exitStayButton, 'assets/btns/keep-playing-btn.png')
+
+    // Remove-ads popup
+    this.load.image(assets.ui.removeAdsHeadingImage, 'assets/remove-ads-heading.png')
+    this.load.image(assets.ui.removeAdsPriceImage, 'assets/price.png')
+    this.load.image(assets.ui.removeAdsNotNowButton, 'assets/btns/not-now.png')
+    this.load.image(assets.ui.removeAdsGoAdFreeButton, 'assets/btns/go-ads-free.png')
 
     // End game
     this.load.image(assets.scene.gameOver, 'assets/gameover.png')
-    this.load.image(assets.scene.restart, 'assets/restart-button.png')
+    this.load.image(assets.scene.restart, 'assets/btns/restart-button.png')
 
     // Birds
     this.load.spritesheet(assets.bird.red, 'assets/bird-red-sprite.png', {
@@ -279,6 +285,18 @@ function create() {
     restartButton.visible = false
     restartButtonBaseScale = restartButton.scaleX
 
+    // Dummy Remove Ads button on game over screen (opens remove-ads popup)
+    removeAdsGameOverButton = this.add.image(assets.scene.width, 360, assets.ui.removeAdsGoAdFreeButton).setInteractive()
+    fitImageToBox(removeAdsGameOverButton, 200, 80)
+    removeAdsGameOverButton.setDepth(20)
+    removeAdsGameOverButton.visible = false
+    removeAdsGameOverButton.on('pointerdown', () => {
+        if (removeAdsPopup) {
+            console.log('[IAP] Game-over Remove Ads button clicked, showing remove-ads popup')
+            removeAdsPopup.show()
+        }
+    })
+
     // Score text style with blue color and white stroke (reused for UI copy)
     const scoreTextStyle = {
         fontFamily: 'jersey15',
@@ -343,6 +361,33 @@ function create() {
                 moveBird()
                 exitPopupPausedGame = false
             }
+        }
+    })
+
+    // Remove-ads popup UI (same size as exit popup, different assets / copy)
+    removeAdsPopup = createExitPopup(scene, {
+        popupBgKey: assets.ui.exitPopupBg,
+        birdsKey: assets.ui.removeAdsPriceImage,
+        headingImageKey: assets.ui.removeAdsHeadingImage,
+        // Make remove-ads headline wider and slightly taller than exit headline
+        headingWidthRatio: 0.8,
+        headingHeightRatio: 0.22,
+        leaveKey: assets.ui.removeAdsNotNowButton,
+        stayKey: assets.ui.removeAdsGoAdFreeButton,
+        subheadingText: 'Enjoy uninterrupted gameplay with an ad-free experience.',
+        onLeave: () => {
+            // "Not now" simply closes the popup
+            if (removeAdsPopup) removeAdsPopup.hide()
+        },
+        onStay: () => {
+            // "Go Ad-Free" triggers IAP flow (implemented via native bridge)
+            console.log('[IAP] Go Ad-Free clicked from remove-ads popup')
+            try {
+                triggerIAPPurchase()
+            } catch (e) {
+                console.log('[IAP] Error triggering IAP from remove-ads popup', e)
+            }
+            if (removeAdsPopup) removeAdsPopup.hide()
         }
     })
     requestExitPopupCallback = () => {
@@ -680,6 +725,7 @@ function hitBird(player) {
     }
     restartEnabled = false
     if (restartButton) restartButton.disableInteractive()
+    if (removeAdsGameOverButton) removeAdsGameOverButton.visible = true
     setRestartPulse(this, false)
     restartEnableTimer = this.time.delayedCall(gameOverShakeDurationMs, () => {
         if (!restartButton) return
@@ -932,6 +978,7 @@ function restartGame() {
     player.destroy()
     gameOverBanner.visible = false
     restartButton.visible = false
+    if (removeAdsGameOverButton) removeAdsGameOverButton.visible = false
     if (restartEnableTimer) {
         restartEnableTimer.remove(false)
         restartEnableTimer = null

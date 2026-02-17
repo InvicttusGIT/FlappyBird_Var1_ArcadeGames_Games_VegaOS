@@ -87,9 +87,11 @@ function createExitPopup(scene, options) {
     const popupHeight = popupBg.displayHeight
 
     let heading = null
+    const headingWidthRatio = typeof opts.headingWidthRatio === 'number' ? opts.headingWidthRatio : 0.5
+    const headingHeightRatio = typeof opts.headingHeightRatio === 'number' ? opts.headingHeightRatio : 0.18
     if (headingImageKey) {
         heading = scene.add.image(0, -popupHeight * 0.32, headingImageKey).setOrigin(0.5)
-        fitImageToBox(heading, popupWidth * 0.5, popupHeight * 0.18)
+        fitImageToBox(heading, popupWidth * headingWidthRatio, popupHeight * headingHeightRatio)
     }
 
     const subheadingStyle = Object.assign({

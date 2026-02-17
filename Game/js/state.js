@@ -11,6 +11,7 @@ let upButton
 let downButton
 let backButton
 let restartButton
+let removeAdsGameOverButton
 let gameOverBanner
 let messageInitial
 
@@ -99,3 +100,6 @@ let flappsBackground
 let exitPopup
 let requestExitPopupCallback
 let exitPopupPausedGame = false
+
+// Remove-ads popup (separate from exit popup, same dimensions)
+let removeAdsPopup
