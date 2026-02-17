@@ -1,22 +1,60 @@
-import React, { useCallback, useRef } from "react"; 
+import React, { useCallback, useEffect, useRef } from "react"; 
 import { BackHandler, StyleSheet, View } from "react-native";
 import { WebView } from "@amazon-devices/webview";
 import {
   useHideSplashScreenCallback,
   usePreventHideSplashScreen,
 } from "@amazon-devices/react-native-kepler";
-import DeviceInfo from "@amazon-devices/react-native-device-info";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridge";
+
+const DEVICE_ID_KEY = "flappybird_device_uuid";
+
+function generateDeviceId(): string {
+  // Generate a pseudo-unique ID: 3 random digits + current timestamp (ms)
+  const rand3 = () => Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+  const timestamp = Date.now().toString();
+  return `${rand3()}${timestamp}`;
+}
+
+async function getOrCreateDeviceId(): Promise<string> {
+  try {
+    const existing = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    if (existing && existing.length > 0) {
+      return existing;
+    }
+    const fresh = generateDeviceId();
+    try {
+      await AsyncStorage.setItem(DEVICE_ID_KEY, fresh);
+    } catch {
+      // If persisting fails, still return the generated ID for this session.
+    }
+    return fresh;
+  } catch {
+    // If anything goes wrong, fall back to a fresh (non-persisted) ID.
+    return generateDeviceId();
+  }
+}
 
 export const App = () => {
   usePreventHideSplashScreen();
   const hideSplashScreenCallback = useHideSplashScreenCallback();
   const webRef = useRef<any>(null);
+  const deviceIdRef = useRef<string | null>(null);
+
+  // Generate or load a persistent per-device ID on mount (for ads and other usage).
+  useEffect(() => {
+    (async () => {
+      const id = await getOrCreateDeviceId();
+      deviceIdRef.current = id;
+      console.log("[DeviceId] on-mount deviceId:", id);
+    })();
+  }, []);
 
   const handleWebViewMessage = useCallback(async (event: any) => {
     // Exit app (Vega back button)
     try {
-      const data = JSON.parse(event.nativeEvent.data);
+      const data = JSON.parse(event.nativeEvent.data);      
       if (data && data.type === "exit-game") {
         BackHandler.exitApp();
         return;
@@ -24,10 +62,19 @@ export const App = () => {
       
       // Device ID request for CTV ads (only for non-premium users)
       if (data && data.type === "get-device-id") {
-        const deviceId = DeviceInfo.getDeviceId();
+        // Use our app-generated persistent device ID as the unique identifier.
+        let currentId = deviceIdRef.current;
+        if (!currentId) {
+          currentId = await getOrCreateDeviceId();
+          deviceIdRef.current = currentId;
+        }
+        console.log("[DeviceId] get-device-id sending:", currentId);
+
         if (webRef.current && typeof webRef.current.injectJavaScript === "function") {
-          // Send device ID if available, otherwise send null (will use default UUID in parser)
-          const json = JSON.stringify({ type: "device-id", value: deviceId || null });
+          const json = JSON.stringify({
+            type: "device-id",
+            value: currentId,
+          });
           const escaped = json
             .replace(/\\/g, "\\\\")
             .replace(/'/g, "\\'")

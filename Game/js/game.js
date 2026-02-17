@@ -53,9 +53,9 @@ try {
                 deviceId = data.value || null
                 console.log('[CTV] received device ID:', deviceId || 'null (will use default UUID)')
                 
-                // If we're on a crash count that's a multiple of 2, trigger ad pre-fetch now that we have device ID
-                // This handles cases where device ID was requested on crash 2, 4, 6, etc.
-                if (!isPremiumUser && crashCount % 2 === 0 && crashCount > 0) {
+                // Pre-fetch 1 crash before playing (crashes 2, 5, 8, 11, etc.)
+                // This handles cases where device ID was requested on crash 2, 5, 8, etc.
+                if (!isPremiumUser && crashCount % 3 === 2 && crashCount > 1) {
                     preFetchAdVideo()
                 }
             }
@@ -699,8 +699,9 @@ function hitBird(player) {
 
     // Only show ads for non-premium users
     if (!isPremiumUser) {
-        // After every 2 crashes (2, 4, 6, 8, etc.), pre-fetch the ad media URL
-        if (crashCount % 2 === 0 && crashCount > 0) {
+        // Pre-fetch 1 crash before playing (crashes 2, 5, 8, 11, etc.)
+        // This ensures the ad is ready when we need to play it on the next crash
+        if (crashCount % 3 === 2 && crashCount > 1) {
             // Check if we have device ID, if not request it first
             if (!deviceId) {
                 console.log('[CTV] requesting device ID for ad pre-fetch (crash', crashCount, ')')
@@ -712,7 +713,7 @@ function hitBird(player) {
             }
         }
         
-        // After every 3 crashes (3, 6, 9, 12, etc.), play the cached ad video
+        // Play ad after every 3 crashes (3, 6, 9, 12, etc.)
         if (crashCount % 3 === 0 && crashCount > 0) {
             // Only play if we have a cached media URL
             if (cachedAdMediaUrl) {

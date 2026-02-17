@@ -58,10 +58,9 @@
             url.searchParams.set('app_store_url', params.appStoreUrl || params.app_store_url);
         }
 
-        // Only set device_id if it's a valid UUID format (not 'unknown_device')
-        // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
+        // Device ID: forward whatever was provided by the app (no UUID enforcement here).
         var deviceIdValue = params.deviceId || params.device_id;
-        if (deviceIdValue && deviceIdValue !== 'unknown_device') {
+        if (deviceIdValue) {
             url.searchParams.set('device_id', deviceIdValue);
         }
 

@@ -252,9 +252,8 @@ async function preFetchAdVideo() {
         return
     }
 
-    // Use device ID if available, otherwise use default UUID format (not 'unknown_device')
-    // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
     const cfg = window.CtvAdsConfig || {}
+    // Use whatever deviceId we have from native app; if missing, fall back to config defaultAid/device ID if desired.
     const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
     console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
 
@@ -266,7 +265,7 @@ async function preFetchAdVideo() {
             appName: cfg.defaultAppName,
             appBundle: cfg.defaultAppBundle,
             deviceCategory: cfg.defaultDeviceCategory,
-            deviceId: deviceIdToUse, // Use the device ID from native app or default UUID
+            deviceId: deviceIdToUse,
             vastVersion: cfg.defaultVastVersion,
             aid: cfg.defaultAid
         }
@@ -380,8 +379,7 @@ async function playAdVideo() {
                 console.log('[CTV] CtvAds parser not available, falling back to built-in video src')
             } else {
                 const cfg = window.CtvAdsConfig || {}
-                // Use device ID from native app if available, otherwise use default UUID format
-                // Adtelligent expects UUID format: 00000000-0000-0000-0000-000000000000
+                // Use whatever deviceId we have from native app; if missing, fall back to config defaultDeviceId or empty.
                 const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
                 const params = {
                     width: cfg.defaultWidth,
