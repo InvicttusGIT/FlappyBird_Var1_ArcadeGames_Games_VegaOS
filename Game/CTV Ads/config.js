@@ -22,8 +22,8 @@
 
         // Static test parameters from sample URL (for development / QA).
         defaultUserAgent: 'Mozilla/5.0 (Linux) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36',
-        defaultAppName: 'test_app',
-        defaultAppBundle: 'test_app',
+        defaultAppName: 'Flappy Wings',
+        defaultAppBundle: 'com.invicttusx.flappywings_v1_ag_game_vega',
         defaultDeviceCategory: 'tv',
         defaultDeviceId: '00000000-0000-0000-0000-000000000000',
 

@@ -256,7 +256,7 @@ async function preFetchAdVideo() {
 
     const cfg = window.CtvAdsConfig || {}
     // Use whatever deviceId we have from native app; if missing, fall back to config defaultAid/device ID if desired.
-    const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
+    const deviceIdToUse = deviceId || cfg.defaultDeviceId
     console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
 
     try {
