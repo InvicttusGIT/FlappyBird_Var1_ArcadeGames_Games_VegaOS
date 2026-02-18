@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@amazon-devices/react-native-async-storage__async-storage";
 
 const HIGH_SCORE_KEY = "flappyBirdHighScore";
 
@@ -38,9 +38,10 @@ export async function sendHighScoreToWebView(webRef: any) {
   }
 }
 
-export async function handleHighScoreMessage(event: any, webRef: any) {
+export async function handleHighScoreMessage(rawMessage: string | null | undefined, webRef: any) {
   try {
-    const data = JSON.parse(event.nativeEvent.data);
+    if (!rawMessage) return;
+    const data = JSON.parse(rawMessage);
 
     if (!data || typeof data !== "object") {
       return;

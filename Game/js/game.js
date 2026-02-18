@@ -59,6 +59,14 @@ try {
                     preFetchAdVideo()
                 }
             }
+            
+             // IAP result from native app (minimal payload: success boolean)
+             if (data && (data.type === 'iap-result' || data.type === 'iap-premium-status')) {
+                 const success = data.success === true
+                 console.log(`[IAP] Received ${data.type} from native app. success=`, success)
+                 isPremiumUser = success
+                 console.log('[IAP] isPremiumUser set to:', isPremiumUser)
+             }
         } catch (e) {
             // Silently ignore parse errors
         }
@@ -427,7 +435,7 @@ function createStartScreenUI(scene, scoreTextStyle) {
     playHintText.setOrigin(0.5, 0.5)
     playHintText.visible = false
 
-    startUiContainer.add([startTitleImage, playButtonImage, playHintText])
+     startUiContainer.add([startTitleImage, playButtonImage, playHintText])
 
     // Pointer focus behavior (mouse/touch)
     playButtonImage.on('pointerover', () => setStartScreenFocus('play'))
@@ -598,6 +606,20 @@ function update(t, dt) {
         return
     }
 
+    // Remove-ads popup should behave like a modal (steal focus from gameplay behind it)
+    if (removeAdsPopup && removeAdsPopup.isVisible()) {
+        if (leftPressed || rightPressed) {
+            removeAdsPopup.toggleFocus()
+        }
+        if (flapPressed) {
+            removeAdsPopup.confirm()
+        }
+        if (backPressed) {
+            removeAdsPopup.hide()
+        }
+        return
+    }
+
     //background image parallax effect
     if (!gameOver) {
     const parallaxDeltaBg = backgroundScrollSpeed * (deltaMs / 1000)
@@ -615,16 +637,20 @@ function update(t, dt) {
     }
 
     if (!gameStarted) {
-        // Horizontal navigation: left/right between play and music
+        // Horizontal navigation: left -> play, right -> music
         if (leftPressed) setStartScreenFocus('play')
         if (rightPressed) setStartScreenFocus('music')
-        // Vertical navigation: play (down) -> music, music (up) -> play
+
+        // Vertical navigation:
+        // - music ↓ -> play
+        // - play ↑ -> music
         if (upPressed) {
             if (startScreenFocus === 'play') setStartScreenFocus('music')
         }
         if (downPressed) {
             if (startScreenFocus === 'music') setStartScreenFocus('play')
         }
+
         if (flapPressed) {
             if (startScreenFocus === 'play') attemptStartFromPlayButton()
             if (startScreenFocus === 'music') toggleMusic(this)

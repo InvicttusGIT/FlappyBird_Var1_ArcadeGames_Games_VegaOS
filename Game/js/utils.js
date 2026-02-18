@@ -459,3 +459,28 @@ async function playAdVideo() {
         cleanup()
     }
 }
+
+/**
+ * Trigger IAP purchase request to native app via postMessage.
+ * The native app will handle the actual purchase flow and send back a response.
+ */
+function triggerIAPPurchase() {
+    // Entitlement SKU (Remove Ads)
+    const sku = 'com.flappywings.game.vega'
+    console.log('[IAP] Sending entitlement purchase request to native app for SKU:', sku)
+    
+    try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            const message = JSON.stringify({
+                type: 'iap-purchase',
+                sku: sku
+            })
+            window.ReactNativeWebView.postMessage(message)
+            console.log('[IAP] Purchase request sent successfully')
+        } else {
+            console.error('[IAP] ReactNativeWebView.postMessage not available')
+        }
+    } catch (e) {
+        console.error('[IAP] Error sending purchase request:', e)
+    }
+}

@@ -5,11 +5,11 @@ import {
   useHideSplashScreenCallback,
   usePreventHideSplashScreen,
 } from "@amazon-devices/react-native-kepler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@amazon-devices/react-native-async-storage__async-storage";
 import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridge";
+import { maybeHandleIapMessage, syncEntitlementToWebView } from "./iapBridge";
 
 const DEVICE_ID_KEY = "flappybird_device_uuid";
-
 function generateDeviceId(): string {
   // Generate a pseudo-unique ID: 3 random digits + current timestamp (ms)
   const rand3 = () => Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -41,6 +41,7 @@ export const App = () => {
   const hideSplashScreenCallback = useHideSplashScreenCallback();
   const webRef = useRef<any>(null);
   const deviceIdRef = useRef<string | null>(null);
+  const isPurchasingRef = useRef<boolean>(false);
 
   // Generate or load a persistent per-device ID on mount (for ads and other usage).
   useEffect(() => {
@@ -52,9 +53,50 @@ export const App = () => {
   }, []);
 
   const handleWebViewMessage = useCallback(async (event: any) => {
+    // Avoid React synthetic event pooling warnings by capturing data synchronously.
+    try {
+      if (event && typeof event.persist === "function") {
+        event.persist();
+      }
+    } catch {
+      // ignore
+    }
+    const rawData: string | null | undefined = event?.nativeEvent?.data;
+
     // Exit app (Vega back button)
     try {
-      const data = JSON.parse(event.nativeEvent.data);      
+      if (!rawData) return;
+      const data = JSON.parse(rawData);
+      
+      // Web console logs bridge
+      if (data && data.type === "web-log") {
+        const level = data.level || "log";
+        const message = data.message || "";
+        const timestamp = data.timestamp || "";
+        
+        // Format log message with timestamp and level
+        const logMessage = `[WebView ${level.toUpperCase()}] ${timestamp ? `[${timestamp}] ` : ""}${message}`;
+        
+        // Use appropriate console method based on level
+        switch (level) {
+          case "error":
+            console.error(logMessage);
+            break;
+          case "warn":
+            console.warn(logMessage);
+            break;
+          case "info":
+            console.info(logMessage);
+            break;
+          case "debug":
+            console.debug(logMessage);
+            break;
+          default:
+            console.log(logMessage);
+        }
+        return;
+      }
+      
       if (data && data.type === "exit-game") {
         BackHandler.exitApp();
         return;
@@ -95,18 +137,33 @@ export const App = () => {
         }
         return;
       }
+
+      // IAP purchase request from WebView
+      if (
+        await maybeHandleIapMessage({
+          data,
+          webRef: webRef.current,
+          isPurchasingRef,
+        })
+      ) {
+        return;
+      }
     } catch {
       // Ignore non‑JSON / malformed messages
     }
 
     // High‑score bridge (AsyncStorage + injectJavaScript)
-    await handleHighScoreMessage(event, webRef);
+    await handleHighScoreMessage(rawData, webRef);
   }, []);
 
   const handleWebViewLoaded = useCallback(() => {
     hideSplashScreenCallback();
     // Send high score to WebView when it's loaded
     sendHighScoreToWebView(webRef);
+
+    // On app launch, sync entitlement status so the web app can set isPremiumUser persistently.
+    // (Also a good place to re-check when app returns BG -> FG later.)
+    syncEntitlementToWebView({ webRef: webRef.current });
   }, [hideSplashScreenCallback]);
 
 

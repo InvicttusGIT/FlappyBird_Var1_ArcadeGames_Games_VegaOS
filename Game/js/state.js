@@ -62,7 +62,7 @@ let runHighScoreBaseline = 0
 let highScoreText
 let highScoreLabelText
 
-// Premium user flag (hardcoded for now, will be set via IAP later)
+// Premium user flag
 let isPremiumUser = false
 
 // Crash counter (used to trigger in-game ad video)
