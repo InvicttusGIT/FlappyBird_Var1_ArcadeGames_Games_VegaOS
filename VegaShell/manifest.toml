@@ -4,6 +4,7 @@ schema-version = 1
 title = "Flappy Wings"
 version = "1.0.0"
 id = "com.invicttusx.flappywings_v1_ag_game_vega"
+icon = "@image/appIcon.png"
 
 [components]
 [[components.interactive]]
@@ -48,6 +49,15 @@ id = "com.amazon.audio.system"
 
 [[wants.service]]
 id = "com.amazon.media.server"
+
+[[wants.service]]
+id = "com.amazon.iap.tester.service"
+[[wants.module]]
+id = "/com.amazonappstore.iap.tester@IIAPTesterUI"
+
+[needs]
+[[needs.module]]
+id = "/com.amazon.kepler.appstore.iap.purchase.core@IAppstoreIAPPurchaseCoreService"
 
 [offers]
 [[offers.service]]
