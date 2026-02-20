@@ -66,6 +66,10 @@ function createExitPopup(scene, options) {
     const headingImageKey = opts.headingImageKey
     const leaveKey = opts.leaveKey
     const stayKey = opts.stayKey
+    const leaveKeyFocused = opts.leaveKeyFocused || leaveKey
+    const stayKeyFocused = opts.stayKeyFocused || stayKey
+    const leaveKeyUnfocused = opts.leaveKeyUnfocused || leaveKey
+    const stayKeyUnfocused = opts.stayKeyUnfocused || stayKey
     const onLeave = typeof opts.onLeave === 'function' ? opts.onLeave : null
     const onStay = typeof opts.onStay === 'function' ? opts.onStay : null
     const overlayAlpha = typeof opts.overlayAlpha === 'number' ? opts.overlayAlpha : 0.6
@@ -107,8 +111,9 @@ function createExitPopup(scene, options) {
 
     const buttonsY = popupHeight * 0.28
     const buttonOffset = popupWidth * 0.15
-    const leaveBtn = scene.add.image(-buttonOffset, buttonsY, leaveKey).setOrigin(0.5).setInteractive()
-    const stayBtn = scene.add.image(buttonOffset, buttonsY, stayKey).setOrigin(0.5).setInteractive()
+    // Start with unfocused textures
+    const leaveBtn = scene.add.image(-buttonOffset, buttonsY, leaveKeyUnfocused).setOrigin(0.5).setInteractive()
+    const stayBtn = scene.add.image(buttonOffset, buttonsY, stayKeyUnfocused).setOrigin(0.5).setInteractive()
     fitImageToBox(leaveBtn, popupWidth * 0.28, popupHeight * 0.14)
     fitImageToBox(stayBtn, popupWidth * 0.28, popupHeight * 0.14)
 
@@ -131,6 +136,16 @@ function createExitPopup(scene, options) {
         stopPulses()
         if (leaveBtn) leaveBtn.setScale(leaveBase)
         if (stayBtn) stayBtn.setScale(stayBase)
+        
+        // Update button textures based on focus state
+        if (focus === 'leave') {
+            if (leaveBtn) leaveBtn.setTexture(leaveKeyFocused)
+            if (stayBtn) stayBtn.setTexture(stayKeyUnfocused)
+        } else {
+            if (leaveBtn) leaveBtn.setTexture(leaveKeyUnfocused)
+            if (stayBtn) stayBtn.setTexture(stayKeyFocused)
+        }
+        
         const pulseOpts = { scale: 1.08, duration: 450 }
         if (focus === 'leave' && leaveBtn) {
             leavePulse = createPulseTween(scene, leaveBtn, leaveBase, pulseOpts)

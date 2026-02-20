@@ -76,12 +76,20 @@ const assets = {
         exitHeadingImage: 'ui-exit-heading-image',
         exitLeaveButton: 'ui-exit-leave-button',
         exitStayButton: 'ui-exit-stay-button',
+        exitLeaveButtonFocused: 'ui-exit-leave-button-focused',
+        exitStayButtonFocused: 'ui-exit-stay-button-focused',
+        exitLeaveButtonUnfocused: 'ui-exit-leave-button-unfocused',
+        exitStayButtonUnfocused: 'ui-exit-stay-button-unfocused',
 
         // Remove-ads popup UI
         removeAdsHeadingImage: 'ui-remove-ads-heading-image',
         removeAdsPriceImage: 'ui-remove-ads-price-image',
         removeAdsNotNowButton: 'ui-remove-ads-not-now-button',
-        removeAdsGoAdFreeButton: 'ui-remove-ads-go-ad-free-button'
+        removeAdsGoAdFreeButton: 'ui-remove-ads-go-ad-free-button',
+        removeAdsNotNowButtonFocused: 'ui-remove-ads-not-now-button-focused',
+        removeAdsGoAdFreeButtonFocused: 'ui-remove-ads-go-ad-free-button-focused',
+        removeAdsNotNowButtonUnfocused: 'ui-remove-ads-not-now-button-unfocused',
+        removeAdsGoAdFreeButtonUnfocused: 'ui-remove-ads-go-ad-free-button-unfocused'
     },
     scoreboard: {
         width: 25,

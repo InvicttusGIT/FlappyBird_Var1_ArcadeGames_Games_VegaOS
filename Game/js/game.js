@@ -135,12 +135,20 @@ function preload() {
     this.load.image(assets.ui.exitBirds, 'assets/birds.png')
     this.load.image(assets.ui.exitLeaveButton, 'assets/btns/leave-btn.png')
     this.load.image(assets.ui.exitStayButton, 'assets/btns/keep-playing-btn.png')
+    this.load.image(assets.ui.exitLeaveButtonFocused, 'assets/btns/leave-focused.png')
+    this.load.image(assets.ui.exitStayButtonFocused, 'assets/btns/keep-playing-focused.png')
+    this.load.image(assets.ui.exitLeaveButtonUnfocused, 'assets/btns/leave-uf.png')
+    this.load.image(assets.ui.exitStayButtonUnfocused, 'assets/btns/keep-playing-uf.png')
 
     // Remove-ads popup
     this.load.image(assets.ui.removeAdsHeadingImage, 'assets/remove-ads-heading.png')
     this.load.image(assets.ui.removeAdsPriceImage, 'assets/price.png')
     this.load.image(assets.ui.removeAdsNotNowButton, 'assets/btns/not-now.png')
     this.load.image(assets.ui.removeAdsGoAdFreeButton, 'assets/btns/go-ads-free.png')
+    this.load.image(assets.ui.removeAdsNotNowButtonFocused, 'assets/btns/not-now-focused.png')
+    this.load.image(assets.ui.removeAdsGoAdFreeButtonFocused, 'assets/btns/go-ads-free-focused.png')
+    this.load.image(assets.ui.removeAdsNotNowButtonUnfocused, 'assets/btns/not-now-uf.png')
+    this.load.image(assets.ui.removeAdsGoAdFreeButtonUnfocused, 'assets/btns/go-ads-free-uf.png')
 
     // End game
     this.load.image(assets.scene.gameOver, 'assets/gameover.png')
@@ -349,6 +357,10 @@ function create() {
         headingImageKey: assets.ui.exitHeadingImage,
         leaveKey: assets.ui.exitLeaveButton,
         stayKey: assets.ui.exitStayButton,
+        leaveKeyFocused: assets.ui.exitLeaveButtonFocused,
+        stayKeyFocused: assets.ui.exitStayButtonFocused,
+        leaveKeyUnfocused: assets.ui.exitLeaveButtonUnfocused,
+        stayKeyUnfocused: assets.ui.exitStayButtonUnfocused,
         onLeave: sendExitGame,
         onStay: () => {
             if (exitPopup) exitPopup.hide()
@@ -370,6 +382,10 @@ function create() {
         headingHeightRatio: 0.22,
         leaveKey: assets.ui.removeAdsNotNowButton,
         stayKey: assets.ui.removeAdsGoAdFreeButton,
+        leaveKeyFocused: assets.ui.removeAdsNotNowButtonFocused,
+        stayKeyFocused: assets.ui.removeAdsGoAdFreeButtonFocused,
+        leaveKeyUnfocused: assets.ui.removeAdsNotNowButtonUnfocused,
+        stayKeyUnfocused: assets.ui.removeAdsGoAdFreeButtonUnfocused,
         subheadingText: 'Enjoy uninterrupted gameplay with an ad-free experience.',
         onLeave: () => {
             // "Not now" simply closes the popup
