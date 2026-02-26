@@ -81,6 +81,9 @@ let deviceId = null
 let scoreMilestonesTracked = {}
 let bestMilestonesTracked = {}
 
+// Screen view tracking flags
+let hasViewedGameplay = false
+
 let currentVelocity = minVelocity
 let isDayTheme = true
 

@@ -1126,7 +1126,10 @@ function prepareGame(scene) {
 function startGame(scene) {
     gameStarted = true
     trackAnalyticsEvent('game_start')
-    trackAnalyticsEvent('view_gameplay')
+    if (!hasViewedGameplay) {
+        trackAnalyticsEvent('view_gameplay')
+        hasViewedGameplay = true
+    }
     setStartScreenVisible(false)
 
     // Start flapps background loop when gameplay begins
