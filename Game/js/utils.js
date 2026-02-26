@@ -27,6 +27,60 @@ function fitImageToBox(image, maxW, maxH) {
 }
 
 /**
+ * Send analytics event to Vega native app (single logging path for Firebase later).
+ * @param {string} name
+ * @param {object} [params]
+ */
+function trackAnalyticsEvent(name, params) {
+    if (!name) return
+    try {
+        console.log('[Analytics][Web] event:', name, params || {})
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                    type: 'analytics-event',
+                    name: name,
+                    params: params || {}
+                })
+            )
+        }
+    } catch (e) {
+        console.log('[Analytics][Web] failed to send analytics event:', name, e)
+    }
+}
+
+/**
+ * Build score bucket label (10..100, 100+).
+ * @param {number} value
+ * @returns {string|null}
+ */
+function getScoreBucketLabel(value) {
+    if (typeof value !== 'number' || value < 10) return null
+    if (value >= 100) return '100+'
+    const tens = Math.floor(value / 10) * 10
+    return String(tens)
+}
+
+/**
+ * Emit score and best-score milestone analytics events.
+ * @param {number} currentScore
+ * @param {number} currentBest
+ */
+function trackScoreMilestones(currentScore, currentBest) {
+    const scoreBucket = getScoreBucketLabel(currentScore)
+    if (scoreBucket && !scoreMilestonesTracked[scoreBucket]) {
+        scoreMilestonesTracked[scoreBucket] = true
+        trackAnalyticsEvent('score_' + scoreBucket, { score: currentScore, bucket: scoreBucket })
+    }
+
+    const bestBucket = getScoreBucketLabel(currentBest)
+    if (bestBucket && !bestMilestonesTracked[bestBucket]) {
+        bestMilestonesTracked[bestBucket] = true
+        trackAnalyticsEvent('best_' + bestBucket, { bestScore: currentBest, bucket: bestBucket })
+    }
+}
+
+/**
  * Create a reusable pulse tween for UI elements.
  * @param {Phaser.Scene} scene
  * @param {Phaser.GameObjects.GameObject} target
@@ -275,6 +329,7 @@ async function preFetchAdVideo() {
     console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
 
     try {
+        trackAnalyticsEvent('ad_called', { stage: 'prefetch' })
         const params = {
             width: cfg.defaultWidth,
             height: cfg.defaultHeight,
@@ -314,10 +369,12 @@ async function preFetchAdVideo() {
 
         if (!mediaUrl) {
             console.log('[CTV] pre-fetch failed: no mediaUrl resolved from VAST chain')
+            trackAnalyticsEvent('ad_failed', { stage: 'prefetch', reason: 'no_media_url' })
             cachedAdMediaUrl = null
         }
     } catch (e) {
         console.log('[CTV] error during ad pre-fetch', e)
+        trackAnalyticsEvent('ad_failed', { stage: 'prefetch', reason: 'exception' })
         cachedAdMediaUrl = null
     }
 }
@@ -339,6 +396,7 @@ async function playAdVideo() {
         console.log('[CTV] premium user, skipping ad playback')
         return
     }
+    trackAnalyticsEvent('ad_called', { stage: 'playback' })
 
     const video = document.getElementById('ad-video')
     if (!video) return
@@ -374,6 +432,7 @@ async function playAdVideo() {
         try {
             if (!isPremiumUser && typeof removeAdsPopup !== 'undefined' && removeAdsPopup && typeof removeAdsPopup.show === 'function') {
                 console.log('[IAP] Showing remove-ads popup after CTV ad finished')
+                trackAnalyticsEvent('subscription_gameover_open')
                 removeAdsPopup.show()
             }
         } catch (e) {
@@ -385,9 +444,11 @@ async function playAdVideo() {
     }
 
     const onEnded = () => {
+        trackAnalyticsEvent('ad_closed', { result: 'ended' })
         cleanup()
     }
     const onError = () => {
+        trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'video_error' })
         cleanup()
     }
 
@@ -450,6 +511,7 @@ async function playAdVideo() {
 
     if (!mediaUrl) {
         console.log('[CTV] no mediaUrl resolved from VAST, using existing video src')
+        trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'no_media_url' })
     } else {
         try {
             // Reset playback and apply resolved media URL
@@ -466,11 +528,16 @@ async function playAdVideo() {
     try {
         const playPromise = video.play()
         if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.then(() => {
+                trackAnalyticsEvent('ad_played', { source: cachedAdMediaUrl ? 'prefetch' : 'live' })
+            })
             playPromise.catch(() => {
+                trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'play_rejected' })
                 cleanup()
             })
         }
     } catch (_) {
+        trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'play_exception' })
         cleanup()
     }
 }
@@ -481,11 +548,13 @@ async function playAdVideo() {
  */
 function triggerIAPPurchase() {
     // Entitlement SKU (Remove Ads)
-    const sku = 'com.flappywings.game.vega'
+    const sku = 'com.essentials.flappywings.pack1'
     console.log('[IAP] Sending entitlement purchase request to native app for SKU:', sku)
+    trackAnalyticsEvent('subscription_gameover_initiate', { sku: sku })
     
     try {
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            trackAnalyticsEvent('subscription_gameover_sub_now', { sku: sku })
             const message = JSON.stringify({
                 type: 'iap-purchase',
                 sku: sku

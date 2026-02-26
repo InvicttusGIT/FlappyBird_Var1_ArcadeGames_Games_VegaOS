@@ -77,6 +77,10 @@ let cachedAdMediaUrl = null
 // Device ID from native app (requested once on app launch, constant for device)
 let deviceId = null
 
+// Analytics milestone trackers (reset each run)
+let scoreMilestonesTracked = {}
+let bestMilestonesTracked = {}
+
 let currentVelocity = minVelocity
 let isDayTheme = true
 

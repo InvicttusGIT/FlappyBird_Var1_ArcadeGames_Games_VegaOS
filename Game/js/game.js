@@ -66,6 +66,13 @@ try {
                  console.log(`[IAP] Received ${data.type} from native app. success=`, success)
                  isPremiumUser = success
                  console.log('[IAP] isPremiumUser set to:', isPremiumUser)
+                 if (data.type === 'iap-result') {
+                     trackAnalyticsEvent(
+                         success
+                             ? 'subscription_gameover_success'
+                             : 'subscription_gameover_failed'
+                     )
+                 }
              }
         } catch (e) {
             // Silently ignore parse errors
@@ -361,8 +368,12 @@ function create() {
         stayKeyFocused: assets.ui.exitStayButtonFocused,
         leaveKeyUnfocused: assets.ui.exitLeaveButtonUnfocused,
         stayKeyUnfocused: assets.ui.exitStayButtonUnfocused,
-        onLeave: sendExitGame,
+        onLeave: () => {
+            trackAnalyticsEvent('exit_yes')
+            sendExitGame()
+        },
         onStay: () => {
+            trackAnalyticsEvent('exit_no')
             if (exitPopup) exitPopup.hide()
             if (exitPopupPausedGame) {
                 scene.physics.resume()
@@ -389,6 +400,7 @@ function create() {
         subheadingText: 'Enjoy uninterrupted gameplay with an ad-free experience.',
         onLeave: () => {
             // "Not now" simply closes the popup
+            trackAnalyticsEvent('subscription_gameover_sub_later')
             if (removeAdsPopup) removeAdsPopup.hide()
         },
         onStay: () => {
@@ -410,6 +422,17 @@ function create() {
             exitPopupPausedGame = true
         }
         exitPopup.show()
+    }
+
+    // Notify native shell that web game is fully ready
+    try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: 'web-ready' })
+            )
+        }
+    } catch (e) {
+        // Ignore if bridge is not available
     }
 }
 
@@ -506,6 +529,7 @@ function setStartScreenVisible(visible) {
     // Ensure a default focused state on start screen
     if (visible) {
         setStartScreenFocus('play')
+        trackAnalyticsEvent('view_home')
     } else {
         setStartScreenFocus(null)
     }
@@ -538,6 +562,7 @@ function setPlayButtonFocus(focused) {
 function attemptStartFromPlayButton() {
     if (gameOver || gameStarted) return
     if (startScreenFocus !== 'play') return
+    trackAnalyticsEvent('home_play_btn_pressed')
     startGame(game.scene.scenes[0])
     setStartScreenVisible(false)
 }
@@ -580,6 +605,7 @@ function stopPulse(target, baseScale, existingTween) {
 
 function toggleMusic(scene) {
     isMusicOn = !isMusicOn
+    trackAnalyticsEvent('music_' + (isMusicOn ? 'on' : 'off'))
     if (musicToggleImage) {
         musicToggleImage.setTexture(isMusicOn ? assets.ui.musicOn : assets.ui.musicOff)
     }
@@ -631,6 +657,7 @@ function update(t, dt) {
             removeAdsPopup.confirm()
         }
         if (backPressed) {
+            trackAnalyticsEvent('subscription_gameover_sub_later')
             removeAdsPopup.hide()
         }
         return
@@ -729,6 +756,8 @@ function hitBird(player) {
 
     // Count crashes so we can trigger in-game ad video
     crashCount++
+    trackAnalyticsEvent('player_crash', { crashCount: crashCount, score: score })
+    trackAnalyticsEvent('view_gameover')
 
     player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
@@ -764,13 +793,21 @@ function hitBird(player) {
     })
     
     // If this run beat the saved high score, persist it now
-    if (score > highScore) {
+    const previousHighScore = highScore
+    let isNewHighScore = false
+    if (score > previousHighScore && score > 0) {
         highScore = score
         saveHighScore(highScore)
+        isNewHighScore = true
     }
 
     // Update and display high score
     updateHighScoreDisplay()
+
+    // Fire score milestones every game over, but fire best_* only when a new high score (>0) is set.
+    // When no new high score, pass 0 so best_* is not emitted.
+    const bestValueForAnalytics = isNewHighScore ? highScore : 0
+    trackScoreMilestones(score, bestValueForAnalytics)
 
     // Only show ads for non-premium users
     if (!isPremiumUser) {
@@ -830,6 +867,7 @@ function advanceLevel() {
 
 function toggleThemeAndPipes() {
     isDayTheme = !isDayTheme
+    trackAnalyticsEvent('game_bg_' + (isDayTheme ? 'day' : 'night'))
 
     backgroundDay.visible = isDayTheme
     backgroundNight.visible = !isDayTheme
@@ -1000,6 +1038,7 @@ function updateHighScoreDisplay() {
 function restartGame() {
     // Do not allow restarting while an ad video is playing
     if (adPlaying) return
+    trackAnalyticsEvent('restart_btn_pressed')
     restartEnabled = false
     pipesGroup.clear(true, true)
     pipesGroup.clear(true, true)
@@ -1037,6 +1076,8 @@ function prepareGame(scene) {
     isDayTheme = true
     currentPipe = assets.obstacle.pipe.green
     score = 0
+    scoreMilestonesTracked = {}
+    bestMilestonesTracked = {}
     // Request high score from React Native AsyncStorage
     // Initialize to 0 if undefined, will be updated via message handler
     if (highScore === undefined) {
@@ -1084,6 +1125,8 @@ function prepareGame(scene) {
  */
 function startGame(scene) {
     gameStarted = true
+    trackAnalyticsEvent('game_start')
+    trackAnalyticsEvent('view_gameplay')
     setStartScreenVisible(false)
 
     // Start flapps background loop when gameplay begins

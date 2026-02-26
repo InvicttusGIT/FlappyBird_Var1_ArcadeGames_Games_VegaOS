@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef } from "react"; 
-import { BackHandler, StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react"; 
+import { BackHandler, StyleSheet, Text, View } from "react-native";
 import { WebView } from "@amazon-devices/webview";
 import {
   useHideSplashScreenCallback,
@@ -8,6 +8,7 @@ import {
 import AsyncStorage from "@amazon-devices/react-native-async-storage__async-storage";
 import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridge";
 import { maybeHandleIapMessage, syncEntitlementToWebView } from "./iapBridge";
+import { initializeFirebaseAnalytics, trackNativeAnalyticsEvent } from "./analytics/analyticsBridge";
 
 const DEVICE_ID_KEY = "flappybird_device_uuid";
 function generateDeviceId(): string {
@@ -42,15 +43,38 @@ export const App = () => {
   const webRef = useRef<any>(null);
   const deviceIdRef = useRef<string | null>(null);
   const isPurchasingRef = useRef<boolean>(false);
+  const webLoadedRef = useRef<boolean>(false);
+  const entitlementSyncStartedRef = useRef<boolean>(false);
+  const [webFailed, setWebFailed] = useState(false);
+  console.log("webFailed", webFailed);
+  
 
   // Generate or load a persistent per-device ID on mount (for ads and other usage).
   useEffect(() => {
     (async () => {
+      await initializeFirebaseAnalytics();
+
       const id = await getOrCreateDeviceId();
       deviceIdRef.current = id;
       console.log("[DeviceId] on-mount deviceId:", id);
     })();
   }, []);
+
+  // If web content never finishes loading, log a timeout analytics event and show fallback UI.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!webLoadedRef.current) {
+        setWebFailed(true);
+        // Even on failure, hide the splash screen so the fallback UI is visible.
+        hideSplashScreenCallback();
+        void trackNativeAnalyticsEvent({
+          name: "web_load_failed",
+          params: { reason: "timeout" },
+        });
+      }
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [hideSplashScreenCallback]);
 
   const handleWebViewMessage = useCallback(async (event: any) => {
     // Avoid React synthetic event pooling warnings by capturing data synchronously.
@@ -96,9 +120,32 @@ export const App = () => {
         }
         return;
       }
+
+      // Web app signals that it is fully ready (Phaser loaded, assets ready, etc.)
+      if (data && data.type === "web-ready") {
+        webLoadedRef.current = true;
+        setWebFailed(false);
+        // Once web is ready (and not failed), we can safely sync entitlement and push premium state to web.
+        if (!entitlementSyncStartedRef.current) {
+          entitlementSyncStartedRef.current = true;
+          syncEntitlementToWebView({ webRef: webRef.current });
+        }
+        return;
+      }
       
       if (data && data.type === "exit-game") {
         BackHandler.exitApp();
+        return;
+      }
+
+      // Web analytics events are forwarded by the game via postMessage.
+      if (data && data.type === "analytics-event" && typeof data.name === "string") {
+        const params =
+          data && typeof data.params === "object" && data.params !== null ? data.params : undefined;
+        await trackNativeAnalyticsEvent({
+          name: data.name,
+          params,
+        });
         return;
       }
       
@@ -157,39 +204,80 @@ export const App = () => {
   }, []);
 
   const handleWebViewLoaded = useCallback(() => {
+    webLoadedRef.current = true;
     hideSplashScreenCallback();
     // Send high score to WebView when it's loaded
     sendHighScoreToWebView(webRef);
-
-    // On app launch, sync entitlement status so the web app can set isPremiumUser persistently.
-    // (Also a good place to re-check when app returns BG -> FG later.)
-    syncEntitlementToWebView({ webRef: webRef.current });
   }, [hideSplashScreenCallback]);
 
 
   return (
     <View style={styles.container}>
-      <WebView
-        ref={webRef}
-        onLoad={handleWebViewLoaded}
-        onMessage={handleWebViewMessage}
-        hasTVPreferredFocus={true}
-        allowSystemKeyEvents={true}
-        mediaPlaybackRequiresUserAction={false}
-        allowsDefaultMediaControl={true}
-        source={{
-          uri: "https://c2npfk3m-5500.asse.devtunnels.ms/",
-        }}
-        javaScriptEnabled={true}
-        onError={(event) => {
-          console.log("onError url: ", event.nativeEvent.url)
-        }}
-      />
+      {webFailed ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Flappy Wings is unavailable</Text>
+          <Text style={styles.errorSubtitle}>
+            Please check your connection or try again later.
+          </Text>
+        </View>
+      ) : (
+        <WebView
+          ref={webRef}
+          onLoad={handleWebViewLoaded}
+          onMessage={handleWebViewMessage}
+          hasTVPreferredFocus={true}
+          allowSystemKeyEvents={true}
+          mediaPlaybackRequiresUserAction={false}
+          allowsDefaultMediaControl={true}
+          source={{
+            uri: "https://c2npfk3m-5500.asse.devtunnels.ms/",
+          }}
+          javaScriptEnabled={true}
+          onHttpError={() => {setWebFailed(true); hideSplashScreenCallback();}}
+          onError={(event) => {
+            const { url, code, description } = event?.nativeEvent || {};
+            console.log("onError url: ", url);
+
+            // Treat as real failure only if web never reported ready
+            if (!webLoadedRef.current) {
+              setWebFailed(true);
+              // Hide splash so the unavailable UI is shown instead of closing.
+              hideSplashScreenCallback();
+              void trackNativeAnalyticsEvent({
+                name: "web_load_failed",
+                params: {
+                  url: url || "",
+                  code: typeof code === "number" || typeof code === "string" ? code : "",
+                  description: description || "",
+                },
+              });
+            }
+          }}
+        />
+      )}
     </View>
   );
 };
 
 // Styles for layout, which are necessary for proper focus behavior
 const styles = StyleSheet.create({
-  container: { flex: 1 }
+  container: { flex: 1 },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    backgroundColor: "#000",
+  },
+  errorTitle: {
+    color: "#ffffff",
+    fontSize: 20,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  errorSubtitle: {
+    color: "#cccccc",
+    fontSize: 14,
+    textAlign: "center",
+  },
 });
