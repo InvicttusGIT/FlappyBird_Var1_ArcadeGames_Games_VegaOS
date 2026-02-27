@@ -72,7 +72,7 @@ export const App = () => {
           params: { reason: "timeout" },
         });
       }
-    }, 15000);
+    }, 20000);
     return () => clearTimeout(timeout);
   }, [hideSplashScreenCallback]);
 
