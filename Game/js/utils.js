@@ -313,6 +313,10 @@ function requestDeviceId() {
  * Only works for non-premium users.
  */
 async function preFetchAdVideo() {
+    if (adPrefetchInProgress) {
+        console.log('[CTV] ad pre-fetch already in progress, skipping duplicate call')
+        return
+    }
     if (isPremiumUser) {
         console.log('[CTV] premium user, skipping ad pre-fetch')
         return
@@ -328,6 +332,7 @@ async function preFetchAdVideo() {
     const deviceIdToUse = deviceId || cfg.defaultDeviceId
     console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
 
+    adPrefetchInProgress = true
     try {
         trackAnalyticsEvent('ad_called', { stage: 'prefetch' })
         const params = {
@@ -360,7 +365,8 @@ async function preFetchAdVideo() {
             if (parsed.mediaUrl) {
                 mediaUrl = parsed.mediaUrl
                 cachedAdMediaUrl = mediaUrl
-                console.log('[CTV] pre-fetched ad media URL cached:', mediaUrl)
+                currentAdDurationSeconds = typeof parsed.durationSeconds === 'number' ? parsed.durationSeconds : null
+                console.log('[CTV] pre-fetched ad media URL cached:', mediaUrl, 'durationSeconds=', currentAdDurationSeconds)
                 break
             }
             currentUrl = parsed.nextTagUrl
@@ -376,6 +382,8 @@ async function preFetchAdVideo() {
         console.log('[CTV] error during ad pre-fetch', e)
         trackAnalyticsEvent('ad_failed', { stage: 'prefetch', reason: 'exception' })
         cachedAdMediaUrl = null
+    } finally {
+        adPrefetchInProgress = false
     }
 }
 
@@ -414,7 +422,13 @@ async function playAdVideo() {
     // Show overlay (black) while we resolve the ad URL
     video.style.display = 'block'
 
+    let adTimeoutId = null
+
     const cleanup = () => {
+        if (adTimeoutId !== null) {
+            clearTimeout(adTimeoutId)
+            adTimeoutId = null
+        }
         // Hide overlay
         video.style.display = 'none'
         // Unmute game audio
@@ -498,6 +512,8 @@ async function playAdVideo() {
 
                     if (parsed.mediaUrl) {
                         mediaUrl = parsed.mediaUrl
+                        currentAdDurationSeconds = typeof parsed.durationSeconds === 'number' ? parsed.durationSeconds : null
+                        console.log('[CTV] resolved inline VAST with durationSeconds=', currentAdDurationSeconds)
                         break
                     }
                     currentUrl = parsed.nextTagUrl
@@ -522,6 +538,16 @@ async function playAdVideo() {
         } catch (e) {
             console.log('[CTV] error applying mediaUrl to video element', e)
         }
+    }
+
+    // Safety timeout: if we know the ad duration, allow 1.5x that time before force-closing.
+    if (typeof currentAdDurationSeconds === 'number' && currentAdDurationSeconds > 0) {
+        const maxAdDurationMs = currentAdDurationSeconds * 1.5 * 1000
+        adTimeoutId = setTimeout(() => {
+            console.log('[CTV] ad timeout reached, closing ad overlay')
+            trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'timeout', durationSeconds: currentAdDurationSeconds })
+            cleanup()
+        }, maxAdDurationMs)
     }
 
     // Start playback (best-effort; if browser blocks autoplay we just clean up)

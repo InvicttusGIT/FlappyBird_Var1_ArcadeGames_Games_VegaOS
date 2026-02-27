@@ -84,7 +84,8 @@
      *    nextTagUrl: string | null,
      *    impressions: string[],
      *    trackingEvents: { [eventName: string]: string[] },
-     *    mediaUrl: string | null
+     *    mediaUrl: string | null,
+     *    durationSeconds: number | null
      *  }
      *
      * - For wrappers: mediaUrl will be null, nextTagUrl may be set.
@@ -149,6 +150,20 @@
             }
         }
 
+        // Try to read <Duration> (HH:MM:SS) for inline creatives
+        var durationSeconds = null;
+        for (var d = 0; d < allNodes.length; d++) {
+            var node5 = allNodes[d];
+            if (node5.tagName && node5.tagName.toLowerCase() === 'duration') {
+                var durText = textOrEmpty(node5);
+                var parsedDur = parseDurationToSeconds(durText);
+                if (!isNaN(parsedDur)) {
+                    durationSeconds = parsedDur;
+                    break;
+                }
+            }
+        }
+
         var resultType = 'unknown';
         if (mediaUrl) {
             resultType = 'inline';
@@ -161,7 +176,8 @@
             nextTagUrl: nextTagUrl,
             impressions: impressions,
             trackingEvents: trackingEvents,
-            mediaUrl: mediaUrl
+            mediaUrl: mediaUrl,
+            durationSeconds: durationSeconds
         };
     }
 
@@ -179,13 +195,25 @@
             nextTagUrl: null,
             impressions: [],
             trackingEvents: {},
-            mediaUrl: null
+            mediaUrl: null,
+            durationSeconds: null
         };
     }
 
     function textOrEmpty(node) {
         if (!node || !node.textContent) return '';
         return String(node.textContent).trim();
+    }
+
+    function parseDurationToSeconds(text) {
+        if (!text || typeof text !== 'string') return NaN;
+        var parts = text.split(':');
+        if (parts.length !== 3) return NaN;
+        var h = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        var s = parseFloat(parts[2]);
+        if (isNaN(h) || isNaN(m) || isNaN(s)) return NaN;
+        return h * 3600 + m * 60 + s;
     }
 
     // Public API

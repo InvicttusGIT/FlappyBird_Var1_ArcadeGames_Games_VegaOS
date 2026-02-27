@@ -77,6 +77,15 @@ let cachedAdMediaUrl = null
 // Device ID from native app (requested once on app launch, constant for device)
 let deviceId = null
 
+// Duration (in seconds) of the currently cached/playing ad, if known
+let currentAdDurationSeconds = null
+
+// Ad scheduling and loading state
+let adPrefetchInProgress = false
+let nextAdPrefetchCrash = 2
+let nextAdPlayCrash = 3
+let lastAdPlayCrash = 0
+
 // Analytics milestone trackers (reset each run)
 let scoreMilestonesTracked = {}
 let bestMilestonesTracked = {}

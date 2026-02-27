@@ -52,10 +52,15 @@ try {
                 // Store device ID if provided, otherwise keep it null (will use default UUID in parser)
                 deviceId = data.value || null
                 console.log('[CTV] received device ID:', deviceId || 'null (will use default UUID)')
-                
-                // Pre-fetch 1 crash before playing (crashes 2, 5, 8, 11, etc.)
-                // This handles cases where device ID was requested on crash 2, 5, 8, etc.
-                if (!isPremiumUser && crashCount % 3 === 2 && crashCount > 1) {
+
+                // If we were already at/after the prefetch point when device ID arrived,
+                // kick off prefetch now (if not already loading and nothing cached).
+                if (
+                    !isPremiumUser &&
+                    crashCount >= nextAdPrefetchCrash &&
+                    !cachedAdMediaUrl &&
+                    !adPrefetchInProgress
+                ) {
                     preFetchAdVideo()
                 }
             }
@@ -811,30 +816,40 @@ function hitBird(player) {
 
     // Only show ads for non-premium users
     if (!isPremiumUser) {
-        // Pre-fetch 1 crash before playing (crashes 2, 5, 8, 11, etc.)
-        // This ensures the ad is ready when we need to play it on the next crash
-        if (crashCount % 3 === 2 && crashCount > 1) {
-            // Check if we have device ID, if not request it first
+        // Dynamic scheduling based on last ad play:
+        //  - Prefetch when crashCount >= nextAdPrefetchCrash
+        //  - Play when crashCount >= nextAdPlayCrash and a cached URL is ready and we're not loading.
+
+        // Kick off prefetch if we've reached/passed the prefetch crash and nothing is cached/ loading.
+        if (
+            crashCount >= nextAdPrefetchCrash &&
+            !cachedAdMediaUrl &&
+            !adPrefetchInProgress
+        ) {
             if (!deviceId) {
                 console.log('[CTV] requesting device ID for ad pre-fetch (crash', crashCount, ')')
                 requestDeviceId()
-                // preFetchAdVideo() will be called when device ID is received (in message handler)
+                // When device ID arrives, preFetchAdVideo() will be invoked from the message handler.
             } else {
-                // Device ID already available, pre-fetch immediately
                 preFetchAdVideo()
             }
         }
-        
-        // Play ad after every 3 crashes (3, 6, 9, 12, etc.)
-        if (crashCount % 3 === 0 && crashCount > 0) {
-            // Only play if we have a cached media URL
-            if (cachedAdMediaUrl) {
-                setTimeout(()=>{
-                    playAdVideo()
-                }, gameOverShakeDurationMs)
-            } else {
-                console.log('[CTV] no cached ad media URL available, skipping ad playback (crash', crashCount, ')')
-            }
+
+        // Attempt to play the ad if we've reached the play threshold, prefetch is done, and we have media.
+        if (
+            crashCount >= nextAdPlayCrash &&
+            !adPrefetchInProgress &&
+            cachedAdMediaUrl
+        ) {
+            const playOnCrash = crashCount
+            setTimeout(() => {
+                playAdVideo()
+            }, gameOverShakeDurationMs)
+
+            // After actually scheduling playback, move the window forward
+            lastAdPlayCrash = playOnCrash
+            nextAdPrefetchCrash = lastAdPlayCrash + 2
+            nextAdPlayCrash = lastAdPlayCrash + 3
         }
     }
 }
