@@ -540,12 +540,23 @@ async function playAdVideo() {
         }
     }
 
-    // Safety timeout: if we know the ad duration, allow 1.5x that time before force-closing.
+    // Safety timeout: if we know the ad duration, allow 1.5x that time; otherwise use a 45s window.
+    let maxAdDurationMs = null
     if (typeof currentAdDurationSeconds === 'number' && currentAdDurationSeconds > 0) {
-        const maxAdDurationMs = currentAdDurationSeconds * 1.5 * 1000
+        maxAdDurationMs = currentAdDurationSeconds * 1.5 * 1000
+    } else {
+        maxAdDurationMs = 45 * 1000
+    }
+    if (maxAdDurationMs != null) {
         adTimeoutId = setTimeout(() => {
             console.log('[CTV] ad timeout reached, closing ad overlay')
-            trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'timeout', durationSeconds: currentAdDurationSeconds })
+            trackAnalyticsEvent('ad_failed', { 
+                stage: 'playback', 
+                reason: 'timeout', 
+                durationSeconds: typeof currentAdDurationSeconds === 'number' && currentAdDurationSeconds > 0
+                    ? currentAdDurationSeconds
+                    : 45
+            })
             cleanup()
         }, maxAdDurationMs)
     }
