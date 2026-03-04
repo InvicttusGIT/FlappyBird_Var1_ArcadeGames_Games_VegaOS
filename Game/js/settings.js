@@ -24,7 +24,7 @@ const fixedHorizontalPipeSetGap = 220
 
 const useRandomPipeGaps = false
 
-const scoreToChangeLevel = 5
+const scoreToChangeLevel = 15
 
 const minGameSpeed = 120
 const maxGameSpeed = 150
