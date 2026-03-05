@@ -118,3 +118,6 @@ let exitPopupPausedGame = false
 
 // Remove-ads popup (separate from exit popup, same dimensions)
 let removeAdsPopup
+
+// IAP purchase in progress flag (used to keep remove-ads popup visible until result)
+let isIapPurchaseInProgress = false

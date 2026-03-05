@@ -126,6 +126,7 @@ function createExitPopup(scene, options) {
     const stayKeyUnfocused = opts.stayKeyUnfocused || stayKey
     const onLeave = typeof opts.onLeave === 'function' ? opts.onLeave : null
     const onStay = typeof opts.onStay === 'function' ? opts.onStay : null
+    const autoHideOnStay = opts.autoHideOnStay !== false
     const overlayAlpha = typeof opts.overlayAlpha === 'number' ? opts.overlayAlpha : 0.6
 
     const overlay = scene.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, overlayAlpha)
@@ -232,7 +233,9 @@ function createExitPopup(scene, options) {
             if (onLeave) onLeave()
         } else {
             if (onStay) onStay()
-            hide()
+            if (autoHideOnStay) {
+                hide()
+            }
         }
     }
 

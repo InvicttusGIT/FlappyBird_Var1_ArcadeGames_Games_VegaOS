@@ -65,20 +65,28 @@ try {
                 }
             }
             
-             // IAP result from native app (minimal payload: success boolean)
-             if (data && (data.type === 'iap-result' || data.type === 'iap-premium-status')) {
-                 const success = data.success === true
-                 console.log(`[IAP] Received ${data.type} from native app. success=`, success)
-                 isPremiumUser = success
-                 console.log('[IAP] isPremiumUser set to:', isPremiumUser)
-                 if (data.type === 'iap-result') {
-                     trackAnalyticsEvent(
-                         success
-                             ? 'subscription_gameover_success'
-                             : 'subscription_gameover_failed'
-                     )
-                 }
-             }
+            // IAP result from native app (minimal payload: success boolean)
+            if (data && (data.type === 'iap-result' || data.type === 'iap-premium-status')) {
+                const success = data.success === true
+                console.log(`[IAP] Received ${data.type} from native app. success=`, success)
+                isPremiumUser = success
+                console.log('[IAP] isPremiumUser set to:', isPremiumUser)
+                if (data.type === 'iap-result') {
+                    trackAnalyticsEvent(
+                        success
+                            ? 'subscription_gameover_success'
+                            : 'subscription_gameover_failed'
+                    )
+                }
+
+                // Purchase flow has finished (success or failure) – allow popup to close now.
+                isIapPurchaseInProgress = false
+                try {
+                    if (removeAdsPopup && typeof removeAdsPopup.hide === 'function') {
+                        removeAdsPopup.hide()
+                    }
+                } catch (_) {}
+            }
         } catch (e) {
             // Silently ignore parse errors
         }
@@ -390,6 +398,8 @@ function create() {
 
     // Remove-ads popup UI (same size as exit popup, different assets / copy)
     removeAdsPopup = createExitPopup(scene, {
+        // Keep popup open after "Go Ad-Free" until native sends iap-result success/fail.
+        autoHideOnStay: false,
         popupBgKey: assets.ui.exitPopupBg,
         birdsKey: assets.ui.removeAdsPriceImage,
         headingImageKey: assets.ui.removeAdsHeadingImage,
@@ -404,19 +414,30 @@ function create() {
         stayKeyUnfocused: assets.ui.removeAdsGoAdFreeButtonUnfocused,
         subheadingText: 'Enjoy uninterrupted gameplay with an ad-free experience.',
         onLeave: () => {
-            // "Not now" simply closes the popup
+            // "Not now" simply closes the popup (only if a purchase is not already in progress)
+            if (isIapPurchaseInProgress) {
+                console.log('[IAP] Not-now pressed while purchase in progress; ignoring until result.')
+                return
+            }
             trackAnalyticsEvent('subscription_gameover_sub_later')
             if (removeAdsPopup) removeAdsPopup.hide()
         },
         onStay: () => {
             // "Go Ad-Free" triggers IAP flow (implemented via native bridge)
+            if (isIapPurchaseInProgress) {
+                console.log('[IAP] Purchase already in progress; ignoring duplicate Go Ad-Free press.')
+                return
+            }
             console.log('[IAP] Go Ad-Free clicked from remove-ads popup')
+            isIapPurchaseInProgress = true
             try {
                 triggerIAPPurchase()
             } catch (e) {
                 console.log('[IAP] Error triggering IAP from remove-ads popup', e)
+                // If we fail to even send the request, immediately clear the in-progress flag
+                isIapPurchaseInProgress = false
             }
-            if (removeAdsPopup) removeAdsPopup.hide()
+            // Do NOT hide popup here; wait for IAP response from native (success/fail) to hide it.
         }
     })
     requestExitPopupCallback = () => {
@@ -655,15 +676,18 @@ function update(t, dt) {
 
     // Remove-ads popup should behave like a modal (steal focus from gameplay behind it)
     if (removeAdsPopup && removeAdsPopup.isVisible()) {
-        if (leftPressed || rightPressed) {
-            removeAdsPopup.toggleFocus()
-        }
-        if (flapPressed) {
-            removeAdsPopup.confirm()
-        }
-        if (backPressed) {
-            trackAnalyticsEvent('subscription_gameover_sub_later')
-            removeAdsPopup.hide()
+        // While purchase is in progress, keep popup visible and ignore navigation/confirm/back.
+        if (!isIapPurchaseInProgress) {
+            if (leftPressed || rightPressed) {
+                removeAdsPopup.toggleFocus()
+            }
+            if (flapPressed) {
+                removeAdsPopup.confirm()
+            }
+            if (backPressed) {
+                trackAnalyticsEvent('subscription_gameover_sub_later')
+                removeAdsPopup.hide()
+            }
         }
         return
     }
