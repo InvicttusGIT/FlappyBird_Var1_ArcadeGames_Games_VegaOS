@@ -63,6 +63,15 @@ async function notifyFulfillmentFulfilled(receiptId: string | undefined | null) 
   }
 }
 
+function extractReceiptId(purchase: any): string | null {
+  if (!purchase) return null;
+  const fromReceiptObj = purchase?.receipt?.receiptId;
+  const fromTopLevel = purchase?.receiptId;
+  const fromIdAlias = purchase?.receipt?.id;
+  const receiptId = fromReceiptObj || fromTopLevel || fromIdAlias;
+  return typeof receiptId === "string" && receiptId.length > 0 ? receiptId : null;
+}
+
 /**
  * Query Amazon IAP for existing purchases and send premium status into the WebView.
  * This is what makes the entitlement "sticky" across app relaunch.
@@ -75,18 +84,18 @@ export async function syncEntitlementToWebView(params: {
     console.log("[IAP] Sync entitlement status via getPurchaseUpdates...");
     let premium = false;
 
-    // First call with reset=true to get a full view of receipts (recommended when app starts).
-    let res: any = await PurchasingService.getPurchaseUpdates({ reset: true } as any);
-    if (res?.responseCode === PurchaseUpdatesResponseCode.SUCCESSFUL) {
-      premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
-      while (res?.hasMore) {
-        res = await PurchasingService.getPurchaseUpdates({ reset: false } as any);
-        if (res?.responseCode !== PurchaseUpdatesResponseCode.SUCCESSFUL) break;
-        premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
-      }
-    } else {
-      console.log("[IAP] getPurchaseUpdates responseCode:", res?.responseCode ?? "undefined");
-    }
+    // // First call with reset=true to get a full view of receipts (recommended when app starts).
+    // let res: any = await PurchasingService.getPurchaseUpdates({ reset: true } as any);
+    // if (res?.responseCode === PurchaseUpdatesResponseCode.SUCCESSFUL) {
+    //   premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
+    //   while (res?.hasMore) {
+    //     res = await PurchasingService.getPurchaseUpdates({ reset: false } as any);
+    //     if (res?.responseCode !== PurchaseUpdatesResponseCode.SUCCESSFUL) break;
+    //     premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
+    //   }
+    // } else {
+    //   console.log("[IAP] getPurchaseUpdates responseCode:", res?.responseCode ?? "undefined");
+    // }
 
     console.log("[IAP] Entitlement premium status:", premium);
     sendToWebView(webRef, { type: "iap-premium-status", success: premium });
@@ -102,7 +111,7 @@ export async function syncEntitlementToWebView(params: {
  * Returns true if the message was handled; false otherwise.
  *
  * WebView message shape:
- *  { type: "iap-purchase", sku?: string }
+ *  { type: "iap-purchase" }
  *
  * WebView response shape (minimal by request):
  *  { type: "iap-result", success: boolean }
@@ -115,31 +124,35 @@ export async function maybeHandleIapMessage(params: {
   const { data, webRef, isPurchasingRef } = params;
   if (!data || data.type !== "iap-purchase") return false;
 
-  const sku = (typeof data.sku === "string" && data.sku.length > 0) ? data.sku : ENTITLEMENT_SKU;
-
   if (isPurchasingRef.current) {
-    console.log("[IAP] Purchase already in progress; ignoring request for SKU:", sku);
+    console.log("[IAP] Purchase already in progress; ignoring request");
     return true;
   }
 
-  console.log("[IAP] Purchase request received from WebView. SKU:", sku);
+  console.log("[IAP] Purchase request received from WebView.");
   isPurchasingRef.current = true;
 
   try {
     console.log("[IAP] Calling PurchasingService.purchase() ...");
-    const purchase: any = await PurchasingService.purchase({ sku });
+    // SKU only lives in Vega shell, never in web payload.
+    const purchase: any = await PurchasingService.purchase({ sku: ENTITLEMENT_SKU });
 
     const responseCode = purchase?.responseCode;
     console.log("[IAP] Purchase responseCode:", responseCode ?? "undefined");
 
-    const success =
-      responseCode === PurchaseResponseCode.SUCCESSFUL ||
-      responseCode === PurchaseResponseCode.ALREADY_PURCHASED;
+    const isSuccessfulPurchase = responseCode === PurchaseResponseCode.SUCCESSFUL;
+    const success = isSuccessfulPurchase || responseCode === PurchaseResponseCode.ALREADY_PURCHASED;
     console.log("[IAP] Purchase success:", success);
 
     if (success) {
-      const receiptId = purchase?.receipt?.receiptId;
-      await notifyFulfillmentFulfilled(receiptId);
+      if (isSuccessfulPurchase) {
+        const receiptId = extractReceiptId(purchase);
+        if (!receiptId) {
+          console.warn("[IAP] SUCCESSFUL purchase but receiptId is missing; notifyFulfillment skipped");
+        } else {
+          await notifyFulfillmentFulfilled(receiptId);
+        }
+      }
       // After a successful purchase, also push premium status to WebView.
       sendToWebView(webRef, { type: "iap-premium-status", success: true });
     }

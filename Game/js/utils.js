@@ -587,17 +587,14 @@ async function playAdVideo() {
  * The native app will handle the actual purchase flow and send back a response.
  */
 function triggerIAPPurchase() {
-    // Entitlement SKU (Remove Ads)
-    const sku = 'com.essentials.flappywings.pack1'
-    console.log('[IAP] Sending entitlement purchase request to native app for SKU:', sku)
-    trackAnalyticsEvent('subscription_gameover_initiate', { sku: sku })
+    console.log('[IAP] Sending entitlement purchase request to native app')
+    trackAnalyticsEvent('subscription_gameover_initiate')
     
     try {
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-            trackAnalyticsEvent('subscription_gameover_sub_now', { sku: sku })
+            trackAnalyticsEvent('subscription_gameover_sub_now')
             const message = JSON.stringify({
-                type: 'iap-purchase',
-                sku: sku
+                type: 'iap-purchase'
             })
             window.ReactNativeWebView.postMessage(message)
             console.log('[IAP] Purchase request sent successfully')
