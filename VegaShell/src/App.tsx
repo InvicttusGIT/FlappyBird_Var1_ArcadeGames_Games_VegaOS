@@ -46,7 +46,6 @@ export const App = () => {
   const webLoadedRef = useRef<boolean>(false);
   const entitlementSyncStartedRef = useRef<boolean>(false);
   const [webFailed, setWebFailed] = useState(false);
-  console.log("webFailed", webFailed);
   
 
   // Generate or load a persistent per-device ID on mount (for ads and other usage).
@@ -56,7 +55,6 @@ export const App = () => {
 
       const id = await getOrCreateDeviceId();
       deviceIdRef.current = id;
-      console.log("[DeviceId] on-mount deviceId:", id);
     })();
   }, []);
 
@@ -91,35 +89,6 @@ export const App = () => {
     try {
       if (!rawData) return;
       const data = JSON.parse(rawData);
-      
-      // Web console logs bridge
-      if (data && data.type === "web-log") {
-        const level = data.level || "log";
-        const message = data.message || "";
-        const timestamp = data.timestamp || "";
-        
-        // Format log message with timestamp and level
-        const logMessage = `[WebView ${level.toUpperCase()}] ${timestamp ? `[${timestamp}] ` : ""}${message}`;
-        
-        // Use appropriate console method based on level
-        switch (level) {
-          case "error":
-            console.error(logMessage);
-            break;
-          case "warn":
-            console.warn(logMessage);
-            break;
-          case "info":
-            console.info(logMessage);
-            break;
-          case "debug":
-            console.debug(logMessage);
-            break;
-          default:
-            console.log(logMessage);
-        }
-        return;
-      }
 
       // Web app signals that it is fully ready (Phaser loaded, assets ready, etc.)
       if (data && data.type === "web-ready") {
@@ -157,7 +126,6 @@ export const App = () => {
           currentId = await getOrCreateDeviceId();
           deviceIdRef.current = currentId;
         }
-        console.log("[DeviceId] get-device-id sending:", currentId);
 
         if (webRef.current && typeof webRef.current.injectJavaScript === "function") {
           const json = JSON.stringify({
@@ -236,7 +204,6 @@ export const App = () => {
           onHttpError={() => {setWebFailed(true); hideSplashScreenCallback();}}
           onError={(event) => {
             const { url, code, description } = event?.nativeEvent || {};
-            console.log("onError url: ", url);
 
             // Treat as real failure only if web never reported ready
             if (!webLoadedRef.current) {

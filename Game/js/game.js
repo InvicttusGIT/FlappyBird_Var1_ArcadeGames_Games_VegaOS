@@ -51,7 +51,6 @@ try {
             if (data && data.type === 'device-id') {
                 // Store device ID if provided, otherwise keep it null (will use default UUID in parser)
                 deviceId = data.value || null
-                console.log('[CTV] received device ID:', deviceId || 'null (will use default UUID)')
 
                 // If we were already at/after the prefetch point when device ID arrived,
                 // kick off prefetch now (if not already loading and nothing cached).
@@ -68,9 +67,7 @@ try {
             // IAP result from native app (minimal payload: success boolean)
             if (data && (data.type === 'iap-result' || data.type === 'iap-premium-status')) {
                 const success = data.success === true
-                console.log(`[IAP] Received ${data.type} from native app. success=`, success)
                 isPremiumUser = success
-                console.log('[IAP] isPremiumUser set to:', isPremiumUser)
                 if (data.type === 'iap-result') {
                     trackAnalyticsEvent(
                         success
@@ -416,7 +413,6 @@ function create() {
         onLeave: () => {
             // "Not now" simply closes the popup (only if a purchase is not already in progress)
             if (isIapPurchaseInProgress) {
-                console.log('[IAP] Not-now pressed while purchase in progress; ignoring until result.')
                 return
             }
             trackAnalyticsEvent('subscription_gameover_sub_later')
@@ -425,15 +421,12 @@ function create() {
         onStay: () => {
             // "Go Ad-Free" triggers IAP flow (implemented via native bridge)
             if (isIapPurchaseInProgress) {
-                console.log('[IAP] Purchase already in progress; ignoring duplicate Go Ad-Free press.')
                 return
             }
-            console.log('[IAP] Go Ad-Free clicked from remove-ads popup')
             isIapPurchaseInProgress = true
             try {
                 triggerIAPPurchase()
             } catch (e) {
-                console.log('[IAP] Error triggering IAP from remove-ads popup', e)
                 // If we fail to even send the request, immediately clear the in-progress flag
                 isIapPurchaseInProgress = false
             }
@@ -851,7 +844,6 @@ function hitBird(player) {
             !adPrefetchInProgress
         ) {
             if (!deviceId) {
-                console.log('[CTV] requesting device ID for ad pre-fetch (crash', crashCount, ')')
                 requestDeviceId()
                 // When device ID arrives, preFetchAdVideo() will be invoked from the message handler.
             } else {

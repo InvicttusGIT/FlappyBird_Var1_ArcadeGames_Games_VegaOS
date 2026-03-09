@@ -69,7 +69,6 @@ function getAnalyticsInstance() {
     analyticsInstance = getAnalytics();
     return analyticsInstance;
   } catch (err) {
-    console.warn("[Analytics][Native] analytics instance unavailable:", err);
     return null;
   }
 }
@@ -77,15 +76,11 @@ function getAnalyticsInstance() {
 async function safeLogEvent(name: string, params?: AnalyticsParams) {
   const inst = getAnalyticsInstance();
   if (!inst) {
-    console.warn("[Analytics][Native] analytics not initialized, dropping event:", name);
     return;
   }
   try {
     await logEvent(inst, name, sanitizeParams(params));
-    console.log("[Analytics][Native]", name, params || {});
-  } catch (err) {
-    console.warn(`[Analytics][Native] failed to log event ${name}:`, err);
-  }
+  } catch (err) {}
 }
 
 export async function initializeFirebaseAnalytics(): Promise<void> {
@@ -99,9 +94,7 @@ export async function initializeFirebaseAnalytics(): Promise<void> {
 
     try {
       await logEvent(analyticsInstance, "app_initialized");
-    } catch (err) {
-      console.warn("[Analytics][Native] could not log app_initialized:", err);
-    }
+    } catch (err) {}
 
     try {
       const firstOpenDone = await AsyncStorage.getItem(FIRST_OPEN_KEY);
@@ -109,9 +102,7 @@ export async function initializeFirebaseAnalytics(): Promise<void> {
         await safeLogEvent("first_app_open");
         await AsyncStorage.setItem(FIRST_OPEN_KEY, "1");
       }
-    } catch (err) {
-      console.warn("[Analytics][Native] first_app_open check failed:", err);
-    }
+    } catch (err) {}
 
     await safeLogEvent("app_open");
 
@@ -130,9 +121,7 @@ export async function initializeFirebaseAnalytics(): Promise<void> {
         }
       });
     }
-  } catch (error) {
-    console.error("[Analytics][Native] Firebase initialization failed:", error);
-  }
+  } catch (error) {}
 }
 
 export async function trackNativeAnalyticsEvent(options: {
@@ -142,7 +131,6 @@ export async function trackNativeAnalyticsEvent(options: {
   const { name, params } = options;
 
   if (!isValidEventName(name)) {
-    console.warn("[Analytics][Native] skipped invalid event name:", name);
     return;
   }
 

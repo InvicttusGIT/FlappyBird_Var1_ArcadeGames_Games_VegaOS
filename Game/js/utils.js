@@ -34,7 +34,6 @@ function fitImageToBox(image, maxW, maxH) {
 function trackAnalyticsEvent(name, params) {
     if (!name) return
     try {
-        console.log('[Analytics][Web] event:', name, params || {})
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
             window.ReactNativeWebView.postMessage(
                 JSON.stringify({
@@ -44,9 +43,7 @@ function trackAnalyticsEvent(name, params) {
                 })
             )
         }
-    } catch (e) {
-        console.log('[Analytics][Web] failed to send analytics event:', name, e)
-    }
+    } catch (e) {}
 }
 
 /**
@@ -317,23 +314,19 @@ function requestDeviceId() {
  */
 async function preFetchAdVideo() {
     if (adPrefetchInProgress) {
-        console.log('[CTV] ad pre-fetch already in progress, skipping duplicate call')
         return
     }
     if (isPremiumUser) {
-        console.log('[CTV] premium user, skipping ad pre-fetch')
         return
     }
 
     if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
-        console.log('[CTV] CtvAds parser not available, cannot pre-fetch ad')
         return
     }
 
     const cfg = window.CtvAdsConfig || {}
     // Use whatever deviceId we have from native app; if missing, fall back to config defaultAid/device ID if desired.
     const deviceIdToUse = deviceId || cfg.defaultDeviceId
-    console.log('[CTV] pre-fetching ad with device ID:', deviceIdToUse)
 
     adPrefetchInProgress = true
     try {
@@ -351,7 +344,6 @@ async function preFetchAdVideo() {
         }
 
         const tagUrl = window.CtvAds.buildCtvTagUrl(params)
-        console.log('[CTV] pre-fetching ad, formed tag URL:', tagUrl)
 
         const maxDepth = (cfg.maxWrapperDepth || 5)
         let currentUrl = tagUrl
@@ -359,17 +351,14 @@ async function preFetchAdVideo() {
         let mediaUrl = null
 
         while (currentUrl && depth < maxDepth && !mediaUrl) {
-            console.log('[CTV] pre-fetch VAST depth', depth, 'url=', currentUrl)
             const response = await fetch(currentUrl)
             const xmlText = await response.text()
             const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
-            console.log('[CTV] pre-fetch parsed VAST depth', depth, 'result:', parsed)
 
             if (parsed.mediaUrl) {
                 mediaUrl = parsed.mediaUrl
                 cachedAdMediaUrl = mediaUrl
                 currentAdDurationSeconds = typeof parsed.durationSeconds === 'number' ? parsed.durationSeconds : null
-                console.log('[CTV] pre-fetched ad media URL cached:', mediaUrl, 'durationSeconds=', currentAdDurationSeconds)
                 break
             }
             currentUrl = parsed.nextTagUrl
@@ -377,12 +366,10 @@ async function preFetchAdVideo() {
         }
 
         if (!mediaUrl) {
-            console.log('[CTV] pre-fetch failed: no mediaUrl resolved from VAST chain')
             trackAnalyticsEvent('ad_failed', { stage: 'prefetch', reason: 'no_media_url' })
             cachedAdMediaUrl = null
         }
     } catch (e) {
-        console.log('[CTV] error during ad pre-fetch', e)
         trackAnalyticsEvent('ad_failed', { stage: 'prefetch', reason: 'exception' })
         cachedAdMediaUrl = null
     } finally {
@@ -404,7 +391,6 @@ async function preFetchAdVideo() {
  */
 async function playAdVideo() {
     if (isPremiumUser) {
-        console.log('[CTV] premium user, skipping ad playback')
         return
     }
     trackAnalyticsEvent('ad_called', { stage: 'playback' })
@@ -448,13 +434,10 @@ async function playAdVideo() {
         // After an ad finishes, show the Remove Ads popup (if available).
         try {
             if (!isPremiumUser && typeof removeAdsPopup !== 'undefined' && removeAdsPopup && typeof removeAdsPopup.show === 'function') {
-                console.log('[IAP] Showing remove-ads popup after CTV ad finished')
                 trackAnalyticsEvent('subscription_gameover_open')
                 removeAdsPopup.show()
             }
-        } catch (e) {
-            console.log('[IAP] Error while showing remove-ads popup after ad', e)
-        }
+        } catch (e) {}
 
         video.removeEventListener('ended', onEnded)
         video.removeEventListener('error', onError)
@@ -475,15 +458,11 @@ async function playAdVideo() {
 
     let mediaUrl = cachedAdMediaUrl // Use pre-fetched URL if available
 
-    // If we have a cached URL, use it immediately (pre-fetched after 2 crashes)
-    if (mediaUrl) {
-        console.log('[CTV] using pre-fetched ad media URL:', mediaUrl)
-    } else {
+    // If we do not have a cached URL, fetch it now (fallback or first time).
+    if (!mediaUrl) {
         // Otherwise, fetch it now (fallback or first time)
         try {
-            if (!window.CtvAds || !window.CtvAds.buildCtvTagUrl || !window.CtvAds.parseCtvVastResponse) {
-                console.log('[CTV] CtvAds parser not available, falling back to built-in video src')
-            } else {
+            if (window.CtvAds && window.CtvAds.buildCtvTagUrl && window.CtvAds.parseCtvVastResponse) {
                 const cfg = window.CtvAdsConfig || {}
                 // Use whatever deviceId we have from native app; if missing, fall back to config defaultDeviceId or empty.
                 const deviceIdToUse = deviceId || cfg.defaultDeviceId || '00000000-0000-0000-0000-000000000000'
@@ -500,36 +479,29 @@ async function playAdVideo() {
                 }
 
                 const tagUrl = window.CtvAds.buildCtvTagUrl(params)
-                console.log('[CTV] formed ad tag URL:', tagUrl)
 
                 const maxDepth = (cfg.maxWrapperDepth || 5)
                 let currentUrl = tagUrl
                 let depth = 0
 
                 while (currentUrl && depth < maxDepth && !mediaUrl) {
-                    console.log('[CTV] fetching VAST depth', depth, 'url=', currentUrl)
                     const response = await fetch(currentUrl)
                     const xmlText = await response.text()
                     const parsed = window.CtvAds.parseCtvVastResponse(xmlText)
-                    console.log('[CTV] parsed VAST depth', depth, 'result:', parsed)
 
                     if (parsed.mediaUrl) {
                         mediaUrl = parsed.mediaUrl
                         currentAdDurationSeconds = typeof parsed.durationSeconds === 'number' ? parsed.durationSeconds : null
-                        console.log('[CTV] resolved inline VAST with durationSeconds=', currentAdDurationSeconds)
                         break
                     }
                     currentUrl = parsed.nextTagUrl
                     depth++
                 }
             }
-        } catch (e) {
-            console.log('[CTV] error while resolving VAST chain', e)
-        }
+        } catch (e) {}
     }
 
     if (!mediaUrl) {
-        console.log('[CTV] no mediaUrl resolved from VAST, using existing video src')
         trackAnalyticsEvent('ad_failed', { stage: 'playback', reason: 'no_media_url' })
     } else {
         try {
@@ -537,10 +509,7 @@ async function playAdVideo() {
             video.pause()
             video.src = mediaUrl
             video.load()
-            console.log('[CTV] final mediaUrl for ad video:', mediaUrl)
-        } catch (e) {
-            console.log('[CTV] error applying mediaUrl to video element', e)
-        }
+        } catch (e) {}
     }
 
     // Safety timeout: if we know the ad duration, allow 1.5x that time; otherwise use a 45s window.
@@ -552,7 +521,6 @@ async function playAdVideo() {
     }
     if (maxAdDurationMs != null) {
         adTimeoutId = setTimeout(() => {
-            console.log('[CTV] ad timeout reached, closing ad overlay')
             trackAnalyticsEvent('ad_failed', { 
                 stage: 'playback', 
                 reason: 'timeout', 
@@ -587,7 +555,6 @@ async function playAdVideo() {
  * The native app will handle the actual purchase flow and send back a response.
  */
 function triggerIAPPurchase() {
-    console.log('[IAP] Sending entitlement purchase request to native app')
     trackAnalyticsEvent('subscription_gameover_initiate')
     
     try {
@@ -597,11 +564,6 @@ function triggerIAPPurchase() {
                 type: 'iap-purchase'
             })
             window.ReactNativeWebView.postMessage(message)
-            console.log('[IAP] Purchase request sent successfully')
-        } else {
-            console.error('[IAP] ReactNativeWebView.postMessage not available')
         }
-    } catch (e) {
-        console.error('[IAP] Error sending purchase request:', e)
-    }
+    } catch (e) {}
 }
