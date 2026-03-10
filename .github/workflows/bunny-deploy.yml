@@ -1,1 +1,40 @@
+name: Deploy to BunnyCDN
 
+on:
+  push:
+    branches:
+      - production   # change to your branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Deploy to Bunny Storage
+        env:
+          STORAGE_ZONE: ${{ secrets.BUNNY_STORAGE_ZONE }}
+          STORAGE_PASSWORD: ${{ secrets.BUNNY_STORAGE_PASSWORD }}
+          REGION: ${{ secrets.BUNNY_REGION }}
+        run: |
+          lftp -u $STORAGE_ZONE,$STORAGE_PASSWORD ftp://$REGION <<EOF
+          set ftp:ssl-allow no
+          mirror -R ./ VegaOS/flappywings-V1 \
+          --parallel=20 \
+          --only-newer \
+          --exclude .git \
+          --exclude .github \
+          --verbose
+          quit
+          EOF
+
+      - name: Purge BunnyCDN Cache
+        run: |
+          curl -X POST "https://api.bunny.net/pullzone/${{ secrets.BUNNY_PULL_ZONE_ID }}/purgeCache" \
+          -H "AccessKey: ${{ secrets.BUNNY_STORAGE_PASSWORD }}" \
+          -H "Content-Type: application/json"
