@@ -24,10 +24,23 @@ jobs:
         run: |
           lftp -u $STORAGE_ZONE,$STORAGE_PASSWORD ftp://$REGION <<EOF
           set ftp:ssl-allow no
+
+          # ---- Dynamic folder cleanup ----
+          # Get all top-level folders on remote
+          set cmdlist (cls -1 --dirs VegaOS/flappywings-V1)
+
+          # For each remote folder, check if it exists locally
+          # Delete remote folder if missing locally
+          foreach folder in \$(cls -1 --dirs VegaOS/flappywings-V1)
+            # Check if folder exists locally
+            ! test -d ./\$folder && rm -r VegaOS/flappywings-V1/\$folder || echo "\$folder exists locally, skipping"
+          end
+
           mirror -R ./ VegaOS/flappywings-V1 \
           --parallel=20 \
           --only-newer \
           --delete \
+          --ignore-errors \
           --exclude .git \
           --exclude .github \
           --verbose
