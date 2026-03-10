@@ -29,7 +29,8 @@ jobs:
           --parallel=20 \
           --only-newer \
           --delete \
-          --exclude .scripts \
+          --ignore-errors \
+          --exclude ^scripts/ \
           --exclude .git \
           --exclude .github \
           --verbose
