@@ -29,6 +29,7 @@ jobs:
           mirror -R ./ VegaOS/flappywings-V1 \
           --parallel=20 \
           --only-newer \
+          --ignore-time-errors \
           --delete \
           --exclude ^scripts/ \
           --exclude .git \
