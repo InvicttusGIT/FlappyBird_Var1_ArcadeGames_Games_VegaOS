@@ -24,6 +24,7 @@ jobs:
         run: |
           lftp -u $STORAGE_ZONE,$STORAGE_PASSWORD ftp://$REGION <<EOF
           set ftp:ssl-allow no
+          set cmd:fail-exit no
 
           mirror -R ./ VegaOS/flappywings-V1 \
           --parallel=20 \
