@@ -1,49 +1,28 @@
-name: Deploy to BunnyCDN
+name: Deploy to S3
 
 on:
   push:
     branches:
-      - production   # change to your branch
+      - production
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Bunny Storage
-        env:
-          STORAGE_ZONE: ${{ secrets.BUNNY_STORAGE_ZONE }}
-          STORAGE_PASSWORD: ${{ secrets.BUNNY_STORAGE_PASSWORD }}
-          REGION: ${{ secrets.BUNNY_REGION }}
+      - name: Deploy to S3
         run: |
-          lftp -u $STORAGE_ZONE,$STORAGE_PASSWORD ftp://$REGION <<EOF
-          set ftp:ssl-allow no
-          mirror -R ./ VegaOS/flappywings-V1 \
-          --parallel=20 \
-          --only-newer \
-          --exclude ^scripts/ \
-          --exclude .git \
-          --exclude .github \
-          --exclude ^node_modules/ \
-          --verbose
-          quit
-          EOF
-
-      - name: Cleanup removed folders
-        env:
-          STORAGE_ZONE: ${{ secrets.BUNNY_STORAGE_ZONE }}
-          STORAGE_PASSWORD: ${{ secrets.BUNNY_STORAGE_PASSWORD }}
-          REGION: ${{ secrets.BUNNY_REGION }}
-        run: python3 scripts/cleanup_bunny_folders.py
-
-      - name: Purge BunnyCDN Cache
-        run: |
-          curl -X POST "https://api.bunny.net/pullzone/${{ secrets.BUNNY_PULL_ZONE_ID }}/purgeCache" \
-          -H "AccessKey: ${{ secrets.BUNNY_STORAGE_PASSWORD }}" \
-          -H "Content-Type: application/json"
+          aws s3 sync ./Game s3://${{ secrets.S3_BUCKET }}/VegaOS/FlappyWings \
+            --delete \
+            --exclude ".git/*" \
+            --exclude ".github/*"
