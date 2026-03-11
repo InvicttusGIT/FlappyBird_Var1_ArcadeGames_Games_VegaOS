@@ -26,3 +26,9 @@ jobs:
             --delete \
             --exclude ".git/*" \
             --exclude ".github/*"
+
+      - name: Purge BunnyCDN Cache
+        run: |
+          curl -X POST "https://api.bunny.net/pullzone/${{ secrets.BUNNY_PULL_ZONE_ID }}/purgeCache" \
+          -H "AccessKey: ${{ secrets.BUNNY_STORAGE_PASSWORD }}" \
+          -H "Content-Type: application/json"
