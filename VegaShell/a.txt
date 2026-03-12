@@ -1,0 +1,1 @@
+/home/nisar/Desktop/react-native/vega-os/FlappyBird/amazoniaptester_armv7_v21-2.vpkg

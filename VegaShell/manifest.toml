@@ -1,0 +1,64 @@
+schema-version = 1
+
+[package]
+title = "Flappy Wings"
+version = "1.0.0"
+id = "com.invicttusx.flappywings_v1_ag_game_vega"
+icon = "@image/appIcon.png"
+
+[components]
+[[components.interactive]]
+id = "com.invicttusx.flappywings_v1_ag_game_vega.main"
+runtime-module = "/com.amazon.kepler.keplerscript.runtime.loader_2@IKeplerScript_2_0"
+launch-type = "singleton"
+categories = ["com.amazon.category.main"]
+
+[wants]
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
+
+[[wants.service]]
+id = "com.amazon.webview.renderer_service"
+
+[[wants.service]]
+id = "com.amazon.inputmethod.service"
+
+[[wants.service]]
+id = "com.amazon.audio.stream"
+
+[[wants.service]]
+id = "com.amazon.audio.control"
+
+[[wants.service]]
+id = "com.amazon.kepler.ucc.publisher"
+
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+
+[[wants.service]]
+id = "com.amazon.gipc.uuid.*"
+
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+
+[[wants.service]]
+id = "com.amazon.audio.system"
+
+[[wants.service]]
+id = "com.amazon.media.server"
+
+[[wants.service]]
+id = "com.amazon.iap.tester.service"
+[[wants.module]]
+id = "/com.amazonappstore.iap.tester@IIAPTesterUI"
+
+[needs]
+[[needs.module]]
+id = "/com.amazon.kepler.appstore.iap.purchase.core@IAppstoreIAPPurchaseCoreService"
+
+[offers]
+[[offers.service]]
+id = "com.amazon.gipc.uuid.*"
