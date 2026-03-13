@@ -1,5 +1,5 @@
 {
   "//": "The declared app name must follow this pattern to be KRL-compatible",
-  "name": "com.invicttusx.flappybird.main",
-  "displayName": "VegaShell"
+  "name": "com.invicttusx.flappywings_v1_ag_game_vega.main",
+  "displayName": "Flappy Wings"
 }
