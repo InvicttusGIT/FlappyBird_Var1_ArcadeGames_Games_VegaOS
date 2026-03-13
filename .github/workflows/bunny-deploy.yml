@@ -22,7 +22,7 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync ./Game "s3://${{ secrets.S3_BUCKET }}/Games/Arcade Games/Flappy Wings/VegaOS/App Data/"
+          aws s3 sync ./Game "s3://${{ secrets.S3_BUCKET }}/Games/Arcade Games/Flappy Wings/VegaOS/App Data/" \
             --delete \
             --exclude ".git/*" \
             --exclude ".github/*"
