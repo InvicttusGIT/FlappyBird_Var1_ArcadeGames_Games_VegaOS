@@ -51,9 +51,9 @@ id = "com.amazon.audio.system"
 id = "com.amazon.media.server"
 
 [[wants.service]]
-id = "com.amazon.iap.tester.service"
+id = "com.amazon.iap.core.service"
 [[wants.module]]
-id = "/com.amazonappstore.iap.tester@IIAPTesterUI"
+id = "/com.amazon.iap.core@IIAPCoreUI"
 
 [needs]
 [[needs.module]]
