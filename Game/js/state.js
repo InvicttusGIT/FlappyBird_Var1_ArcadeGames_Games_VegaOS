@@ -12,7 +12,6 @@ let downButton
 let backButton
 let restartButton
 let gameOverBanner
-let messageInitial
 
 // Start screen UI
 let startUiContainer
@@ -39,11 +38,9 @@ let restartEnableTimer
 let restartEnabled = false
 
 let player
-let birdName
 let framesMoveUp
 
-let backgroundDay
-let backgroundNight
+let backgroundMain
 
 let groundCollider
 let groundSprite
@@ -52,7 +49,7 @@ let pipesGroup
 let gapsGroup
 let pipeTravelDistanceSinceLast
 let nextPipeSpawnDistance
-let currentPipe
+let currentObstacleSet
 
 let scoreText
 let scoreLabelText
@@ -94,7 +91,6 @@ let bestMilestonesTracked = {}
 let hasViewedGameplay = false
 
 let currentVelocity = minVelocity
-let isDayTheme = true
 
 let debugText
 let backHandlerAttached = false

@@ -15,16 +15,19 @@ const minVelocity = 50
 const backgroundScrollSpeed = 20
 
 const verticalPipeGapMin = 400
-const verticalPipeGapMax = 480
-const fixedVerticalPipeGap = 420
+const verticalPipeGapMax = 450
+const fixedVerticalPipeGap = 400
+
+// Visual safety margins so pipes never disappear completely due to screen/top clipping
+// or overlapping the ground overlay.
+const pipeMinVisiblePx = 10
 
 const horizontalPipeSetGapMin = 160
 const horizontalPipeSetGapMax = 300
 const fixedHorizontalPipeSetGap = 220
 
-const useRandomPipeGaps = false
 
-const scoreToChangeLevel = 15
+const scoreToChangeLevel = 5
 
 const minGameSpeed = 120
 const maxGameSpeed = 150
