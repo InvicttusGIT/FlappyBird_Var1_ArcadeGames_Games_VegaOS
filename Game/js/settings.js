@@ -14,17 +14,17 @@ const minVelocity = 50
 
 const backgroundScrollSpeed = 20
 
-const verticalPipeGapMin = 450
-const verticalPipeGapMax = 600
-const fixedVerticalPipeGap = 400
+const verticalObstacleGapMin = 450
+const verticalObstacleGapMax = 600
+const fixedVerticalObstacleGap = 400
 
-// Visual safety margins so pipes never disappear completely due to screen/top clipping
+// Visual safety margins so obstacles never disappear completely due to screen/top clipping
 // or overlapping the ground overlay.
-const pipeMinVisiblePx = 10
+const obstacleMinVisiblePx = 10
 
-const horizontalPipeSetGapMin = 160
-const horizontalPipeSetGapMax = 300
-const fixedHorizontalPipeSetGap = 220
+const horizontalObstacleSetGapMin = 160
+const horizontalObstacleSetGapMax = 300
+const fixedHorizontalObstacleSetGap = 220
 
 
 const scoreToChangeLevel = 5

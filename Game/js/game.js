@@ -140,7 +140,7 @@ function preload() {
     this.load.audio('score', 'assets/audio/score.mp3')
     this.load.audio('gameover', 'assets/audio/game-over.mp3')
     this.load.audio('backgroundMusic', 'assets/audio/background-music.mp3')
-    this.load.audio('flappsBackground', 'assets/audio/flapps.mp3')
+    this.load.audio('gameplayLoopSound', 'assets/audio/flapps.mp3')
 
     // New UI assets
     this.load.image(assets.ui.letsFlyButton, 'assets/btns/lets-fly.png')
@@ -190,12 +190,12 @@ function create() {
     backgroundMain = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background).setInteractive()
     backgroundMain.on('pointerdown', () => {
         // Prevent accidental start on TVs: only flap when game already started.
-        if (gameStarted && !gameOver) moveBird()
+        if (gameStarted && !gameOver) propelPlayer()
         else setPlayButtonFocus(true)
     })
 
     gapsGroup = this.physics.add.group()
-    pipesGroup = this.physics.add.group()
+    obstaclesGroup = this.physics.add.group()
 
     const groundY = 458
     groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
@@ -313,7 +313,7 @@ function create() {
             if (exitPopup) exitPopup.hide()
             if (exitPopupPausedGame) {
                 scene.physics.resume()
-                moveBird()
+                propelPlayer()
                 exitPopupPausedGame = false
             }
         }
@@ -582,7 +582,7 @@ function toggleMusic(scene) {
 }
 
 /**
- *  Update the scene frame by frame, responsible for move and rotate the bird and to create and move the pipes.
+ *  Update the scene frame by frame, responsible for move and rotate the player and to create and move obstacles.
  */
 function update(t, dt) {
     const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
@@ -669,7 +669,7 @@ function update(t, dt) {
         framesMoveUp--
     else 
     if (flapPressed )
-        moveBird()
+        propelPlayer()
     else {
         currentVelocity += gravity * (deltaMs / 1000)
 
@@ -684,7 +684,7 @@ function update(t, dt) {
         }
     }
 
-    pipesGroup.children.iterate(function (child) {
+    obstaclesGroup.children.iterate(function (child) {
         if (child == undefined)
             return
 
@@ -701,19 +701,19 @@ function update(t, dt) {
         child.body.setVelocityX(-currentGameSpeed)
     })
 
-    pipeTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
-    if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
-        makePipes(game.scene.scenes[0])
-        pipeTravelDistanceSinceLast = 0
-        nextPipeSpawnDistance = getHorizontalPipeSetGap()
+    obstacleTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
+    if (obstacleTravelDistanceSinceLast >= nextObstacleSpawnDistance) {
+        makeObstacles(game.scene.scenes[0])
+        obstacleTravelDistanceSinceLast = 0
+        nextObstacleSpawnDistance = getHorizontalObstacleSetGap()
     }
 }
 
 /**
- *  Bird collision event.
- *  @param {object} player - Game object that collided, in this case the bird. 
+ *  Player collision event.
+ *  @param {object} player - Game object that collided, in this case the player. 
  */
-function hitBird(player) {
+function handlePlayerHit(player) {
     this.physics.pause()
     gameOver = true
     gameStarted = false
@@ -726,9 +726,9 @@ function hitBird(player) {
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
 
     // Stop gameplay background loop on game over
-    if (flappsBackground && flappsBackground.isPlaying) {
+    if (gameplayLoopSound && gameplayLoopSound.isPlaying) {
         try {
-            flappsBackground.stop()
+            gameplayLoopSound.stop()
         } catch (_) {}
     }
 
@@ -814,7 +814,7 @@ function hitBird(player) {
 
 /**
  *   Update the scoreboard.
- *   @param {object} _ - Game object that overlapped, in this case the bird (ignored).
+ *   @param {object} _ - Game object that overlapped, in this case the player (ignored).
  *   @param {object} gap - Game object that was overlapped, in this case the gap.
  */
 function updateScore(_, gap) {
@@ -844,7 +844,7 @@ function toggleObstaclesByLevel() {
             : assets.obstacles.pencil
     currentObstacleSet = nextObstacleSet
 
-    pipesGroup.children.iterate(function (child) {
+    obstaclesGroup.children.iterate(function (child) {
         if (!child)
             return
         if (child.texture && (child.texture.key === assets.obstacles.pencil.top || child.texture.key === assets.obstacles.ruler.top))
@@ -854,18 +854,18 @@ function toggleObstaclesByLevel() {
     })
 }
 
-function getHorizontalPipeSetGap() {
-    return getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
+function getHorizontalObstacleSetGap() {
+    return getRandomBetween(horizontalObstacleSetGapMin, horizontalObstacleSetGapMax)
 }
 
 /**
- * Create pipes and gap in the game.
+ * Create obstacle pair and score gap in the game.
  * @param {object} scene - Game scene.
  */
-function makePipes(scene) {
+function makeObstacles(scene) {
     if (!gameStarted || gameOver) return
 
-    // Pipe sprites use center-origin; keep the bottom pipe's top edge
+    // Obstacle sprites use center-origin; keep the lower obstacle's top edge
     // from being fully covered by the ground visuals.
     //
     // groundSprite: center at y=458 with height=112 => ground top boundary is 402.
@@ -873,30 +873,30 @@ function makePipes(scene) {
     const groundSpriteHeight = 112
     const groundTopY = groundY - groundSpriteHeight / 2
 
-    // assets pipe height is 256 => half is 128.
-    const pipeHeight = 256
-    const pipeHalfHeight = pipeHeight / 2
+    // Obstacle asset height is 256 => half is 128.
+    const obstacleHeight = 256
+    const obstacleHalfHeight = obstacleHeight / 2
 
-    const verticalGap = getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
+    const verticalGap = getRandomBetween(verticalObstacleGapMin, verticalObstacleGapMax)
 
-    // Ensure at least N pixels of the top pipe remain visible below the screen top.
-    // Top pipe bottom edge = pipeTopY + pipeHalfHeight.
-    const pipeTopYMinFromTopVisibility = pipeMinVisiblePx - pipeHalfHeight
+    // Ensure at least N pixels of the upper obstacle remain visible below the screen top.
+    // Upper obstacle bottom edge = obstacleTopY + obstacleHalfHeight.
+    const obstacleTopYMinFromTopVisibility = obstacleMinVisiblePx - obstacleHalfHeight
 
-    // Ensure at least N pixels of the bottom pipe remain visible above the ground overlay.
-    // Bottom pipe top edge = (pipeTopY + verticalGap) - pipeHalfHeight.
-    // Require: bottom pipe top edge <= (groundTopY - pipeMinVisiblePx)
-    const pipeTopYMaxFromGroundVisibility = groundTopY - pipeMinVisiblePx + pipeHalfHeight - verticalGap
+    // Ensure at least N pixels of the lower obstacle remain visible above the ground overlay.
+    // Lower obstacle top edge = (obstacleTopY + verticalGap) - obstacleHalfHeight.
+    // Require: lower obstacle top edge <= (groundTopY - obstacleMinVisiblePx)
+    const obstacleTopYMaxFromGroundVisibility = groundTopY - obstacleMinVisiblePx + obstacleHalfHeight - verticalGap
 
     // Keep your original spawn range as a fallback guard.
-    const pipeTopYMin = Math.max(-120, pipeTopYMinFromTopVisibility)
-    const pipeTopYMaxClamped = Math.max(pipeTopYMin, pipeTopYMaxFromGroundVisibility)
-    // bottom pipe center = pipeTopY + verticalGap
-    // bottom pipe top edge = (pipeTopY + verticalGap) - pipeHalfHeight
-    // require: bottom pipe top edge <= (groundTopY - pipeMinVisiblePx)
-    const pipeTopY = Phaser.Math.Between(pipeTopYMin, pipeTopYMaxClamped)
+    const obstacleTopYMin = Math.max(-120, obstacleTopYMinFromTopVisibility)
+    const obstacleTopYMaxClamped = Math.max(obstacleTopYMin, obstacleTopYMaxFromGroundVisibility)
+    // Lower obstacle center = obstacleTopY + verticalGap
+    // Lower obstacle top edge = (obstacleTopY + verticalGap) - obstacleHalfHeight
+    // Require: lower obstacle top edge <= (groundTopY - obstacleMinVisiblePx)
+    const obstacleTopY = Phaser.Math.Between(obstacleTopYMin, obstacleTopYMaxClamped)
 
-    const gapCenterY = pipeTopY + (verticalGap / 2)
+    const gapCenterY = obstacleTopY + (verticalGap / 2)
     const gapLineHeight = verticalGap
     const gap = scene.add.line(GAME_WIDTH, gapCenterY, 0, -gapLineHeight / 2, 0, gapLineHeight / 2)
     gapsGroup.add(gap)
@@ -904,20 +904,20 @@ function makePipes(scene) {
     gap.body.setSize(1, gapLineHeight, true)
     gap.visible = false
 
-    const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentObstacleSet.top)
-    pipeTop.body.setSize(pipeTop.width-20, pipeTop.height-12)
+    const upperObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    upperObstacle.body.setSize(upperObstacle.width - 20, upperObstacle.height - 12)
 
-    pipeTop.body.allowGravity = false
+    upperObstacle.body.allowGravity = false
 
-    const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + verticalGap, currentObstacleSet.bottom)
-    pipeBottom.body.setSize(pipeBottom.width-20, pipeBottom.height-12 )
-    pipeBottom.body.allowGravity = false
+    const lowerObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    lowerObstacle.body.setSize(lowerObstacle.width - 20, lowerObstacle.height - 12)
+    lowerObstacle.body.allowGravity = false
 }
 
 /**
- * Move the bird in the screen.
+ * Apply upward impulse to the player.
  */
-function moveBird() {
+function propelPlayer() {
     if (gameOver)
         return
 
@@ -990,8 +990,8 @@ function restartGame() {
     if (adPlaying) return
     trackAnalyticsEvent('restart_btn_pressed')
     restartEnabled = false
-    pipesGroup.clear(true, true)
-    pipesGroup.clear(true, true)
+    obstaclesGroup.clear(true, true)
+    obstaclesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     player.destroy()
     gameOverBanner.visible = false
@@ -1016,13 +1016,13 @@ function restartGame() {
 }
 
 /**
- * Restart all variable and configurations, show main and recreate the bird.
+ * Restart all variables/configuration, show main UI, and recreate the player.
  * @param {object} scene - Game scene.
  */
 function prepareGame(scene) {
     framesMoveUp = 0
-    pipeTravelDistanceSinceLast = 0
-    nextPipeSpawnDistance = getHorizontalPipeSetGap()
+    obstacleTravelDistanceSinceLast = 0
+    nextObstacleSpawnDistance = getHorizontalObstacleSetGap()
     currentObstacleSet = assets.obstacles.pencil
     score = 0
     scoreMilestonesTracked = {}
@@ -1055,8 +1055,8 @@ function prepareGame(scene) {
     scoreSound = scene.sound.add('score', { volume: 0.1 })
     gameOverSound = scene.sound.add('gameover', { volume: 0.1 })
 
-    scene.physics.add.collider(player, groundCollider, hitBird, null, scene)
-    scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)
+    scene.physics.add.collider(player, groundCollider, handlePlayerHit, null, scene)
+    scene.physics.add.collider(player, obstaclesGroup, handlePlayerHit, null, scene)
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
@@ -1068,7 +1068,7 @@ function prepareGame(scene) {
 }
 
 /**
- * Start the game, create pipes and hide the main menu.
+ * Start gameplay, create obstacles, and hide the main menu.
  * @param {object} scene - Game scene.
  */
 function startGame(scene) {
@@ -1080,18 +1080,18 @@ function startGame(scene) {
     }
     setStartScreenVisible(false)
 
-    // Start flapps background loop when gameplay begins
-    if (!flappsBackground) {
-        flappsBackground = scene.sound.add('flappsBackground', {
+    // Start gameplay loop sound when gameplay begins
+    if (!gameplayLoopSound) {
+        gameplayLoopSound = scene.sound.add('gameplayLoopSound', {
             volume: 0.4,
             loop: true
         })
     }
     try {
-        flappsBackground.play()
+        gameplayLoopSound.play()
     } catch (_) {}
 
-    moveBird() // give bird an initial jump
+    propelPlayer() // give player an initial upward impulse
 
     player.body.allowGravity = true
 
@@ -1099,6 +1099,6 @@ function startGame(scene) {
     updateScoreboard()
     updateHighScoreDisplay()
 
-    makePipes(scene)
+    makeObstacles(scene)
 }
 

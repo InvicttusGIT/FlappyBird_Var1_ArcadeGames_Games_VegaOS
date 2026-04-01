@@ -46,10 +46,10 @@ let backgroundMain
 let groundCollider
 let groundSprite
 
-let pipesGroup
+let obstaclesGroup
 let gapsGroup
-let pipeTravelDistanceSinceLast
-let nextPipeSpawnDistance
+let obstacleTravelDistanceSinceLast
+let nextObstacleSpawnDistance
 let currentObstacleSet
 
 let scoreText
@@ -106,7 +106,7 @@ let flapSound
 let gameOverSound
 let scoreSound
 let backgroundMusic
-let flappsBackground
+let gameplayLoopSound
 
 // Exit popup
 let exitPopup

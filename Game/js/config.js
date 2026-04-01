@@ -26,6 +26,9 @@ function createConfigurations(preload, create, update) {
         },
         physics: {
             default: 'arcade',
+            arcade:{
+                debug: true,
+            }
         },
         scene: {
             preload,
