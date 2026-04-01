@@ -127,6 +127,8 @@ function preload() {
     // Single background and ground
     this.load.image(assets.scene.background, 'assets/background-main.png')
     this.load.image(assets.scene.ground, 'assets/ground-main.png')
+    // Start screen dedicated background
+    this.load.image(assets.scene.startBackground, 'assets/background-start-screen.png')
 
     // Level obstacles: pencil and ruler sets
     this.load.image(assets.obstacles.pencil.top, 'assets/pencil-top.png')
@@ -179,6 +181,12 @@ function preload() {
  *   Create the game objects (images, groups, sprites and animations).
  */
 function create() {
+    // Start screen static background (shown only on start screen)
+    startBackgroundImage = this.add.image(GAME_CENTER_X, GAME_HEIGHT / 2, assets.scene.startBackground)
+    startBackgroundImage.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+    startBackgroundImage.setDepth(0)
+    startBackgroundImage.visible = true
+
     backgroundMain = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background).setInteractive()
     backgroundMain.on('pointerdown', () => {
         // Prevent accidental start on TVs: only flap when game already started.
@@ -455,6 +463,14 @@ function sendExitGame() {
 function setStartScreenVisible(visible) {
     if (startUiContainer) startUiContainer.visible = visible
     if (musicToggleImage) musicToggleImage.visible = visible
+    if (startBackgroundImage) startBackgroundImage.visible = visible
+    // Hide gameplay background/ground while start screen is visible
+    if (backgroundMain) backgroundMain.visible = !visible
+    if (groundSprite) groundSprite.visible = !visible
+    // Hide player while start screen is shown
+    if (player) {
+        player.visible = !visible
+    }
 
     // Hide score UI on start screen
     if (visible) {
@@ -889,12 +905,12 @@ function makePipes(scene) {
     gap.visible = false
 
     const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentObstacleSet.top)
-    pipeTop.body.setSize(pipeTop.width-12, pipeTop.height-12)
+    pipeTop.body.setSize(pipeTop.width-20, pipeTop.height-12)
 
     pipeTop.body.allowGravity = false
 
     const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + verticalGap, currentObstacleSet.bottom)
-    pipeBottom.body.setSize(pipeBottom.width-12, pipeBottom.height-12 )
+    pipeBottom.body.setSize(pipeBottom.width-20, pipeBottom.height-12 )
     pipeBottom.body.allowGravity = false
 }
 
@@ -1028,9 +1044,13 @@ function prepareGame(scene) {
     setStartScreenVisible(true)
 
     player = scene.physics.add.sprite(100, 250, assets.character.paperPlane)
-    player.body.setCircle(10, 5, 2)
+    player.body.setCircle(13, 7, 2)
     player.setCollideWorldBounds(true)
     player.body.allowGravity = false
+    // Ensure hidden beneath start screen until gameplay begins
+    if (!gameStarted) {
+        player.visible = false
+    }
 
     scoreSound = scene.sound.add('score', { volume: 0.1 })
     gameOverSound = scene.sound.add('gameover', { volume: 0.1 })

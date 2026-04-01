@@ -18,6 +18,7 @@ let startUiContainer
 let startTitleImage
 let playButtonImage
 let playHintText
+let startBackgroundImage
 let playButtonFocused = false
 let playPulseTween
 let playButtonBaseScale = 1

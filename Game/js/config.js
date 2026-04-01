@@ -26,9 +26,9 @@ function createConfigurations(preload, create, update) {
         },
         physics: {
             default: 'arcade',
-            // arcade:{
-            //     debug: true,
-            // }
+            arcade:{
+                debug: true,
+            }
         },
         scene: {
             preload,
@@ -56,6 +56,7 @@ const assets = {
         width: GAME_CENTER_X,
         background: 'background-main',
         ground: 'ground-main',
+        startBackground: 'background-start-screen',
     },
     ui: {
         letsFlyButton: 'ui-lets-fly-button',
