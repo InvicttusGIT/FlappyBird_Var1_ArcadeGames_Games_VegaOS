@@ -66,7 +66,7 @@ const assets = {
         soundOffUnfocused: 'ui-sound-off-unfocused',
         soundOffFocused: 'ui-sound-off-focused',
         exitPopupBg: 'ui-exit-popup-bg',
-        exitBirds: 'ui-exit-birds',
+        exitPlaneIllustration: 'ui-exit-plane-illustration',
         exitHeadingImage: 'ui-exit-heading-image',
         exitLeaveButton: 'ui-exit-leave-button',
         exitStayButton: 'ui-exit-stay-button',

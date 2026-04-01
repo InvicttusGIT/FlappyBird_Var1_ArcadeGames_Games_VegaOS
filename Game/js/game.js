@@ -150,7 +150,7 @@ function preload() {
     this.load.image(assets.ui.soundOffFocused, 'assets/btns/sound-focus-off.png')
     this.load.image(assets.ui.exitPopupBg, 'assets/popup-bg.png')
     this.load.image(assets.ui.exitHeadingImage, 'assets/Leaving the sky.png')
-    this.load.image(assets.ui.exitBirds, 'assets/birds.png')
+    this.load.image(assets.ui.exitPlaneIllustration, 'assets/plane.png')
     this.load.image(assets.ui.exitLeaveButton, 'assets/btns/leave-uf.png')
     this.load.image(assets.ui.exitStayButton, 'assets/btns/keep-playing-uf.png')
     this.load.image(assets.ui.exitLeaveButtonFocused, 'assets/btns/leave-focused.png')
@@ -271,7 +271,7 @@ function create() {
     scoreText.visible = false
 
     // Create score label (give a bit more breathing room under the digits)
-    scoreLabelText = this.add.text(40, 70, 'CURRENT SCORE', labelTextStyle)
+    scoreLabelText = this.add.text(40, 70, 'Current Score', labelTextStyle)
     scoreLabelText.setOrigin(0, 0)
     scoreLabelText.setDepth(10)
     scoreLabelText.visible = false
@@ -283,7 +283,7 @@ function create() {
     highScoreText.visible = false
 
     // Create high score label with same vertical gap as current score
-    highScoreLabelText = this.add.text(GAME_WIDTH - 40, 70, 'HIGH SCORE', labelTextStyle)
+    highScoreLabelText = this.add.text(GAME_WIDTH - 40, 70, 'High Score', labelTextStyle)
     highScoreLabelText.setOrigin(1, 0)  // Right-aligned
     highScoreLabelText.setDepth(10)
     highScoreLabelText.visible = false
@@ -296,7 +296,7 @@ function create() {
     const scene = this
     exitPopup = createExitPopup(scene, {
         popupBgKey: assets.ui.exitPopupBg,
-        birdsKey: assets.ui.exitBirds,
+        illustrationKey: assets.ui.exitPlaneIllustration,
         headingImageKey: assets.ui.exitHeadingImage,
         leaveKey: assets.ui.exitLeaveButton,
         stayKey: assets.ui.exitStayButton,
@@ -324,7 +324,7 @@ function create() {
         // Keep popup open after "Go Ad-Free" until native sends iap-result success/fail.
         autoHideOnStay: false,
         popupBgKey: assets.ui.exitPopupBg,
-        birdsKey: assets.ui.removeAdsPriceImage,
+        illustrationKey: assets.ui.removeAdsPriceImage,
         headingImageKey: assets.ui.removeAdsHeadingImage,
         // Make remove-ads headline wider and slightly taller than exit headline
         headingWidthRatio: 0.8,

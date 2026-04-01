@@ -5,7 +5,7 @@ import {
   PurchasingService,
 } from "@amazon-devices/keplerscript-appstore-iap-lib";
 
-const ENTITLEMENT_SKU = "com.essentials.flappywings.pack1";
+const ENTITLEMENT_SKU = "com.essentials.flappywings.pack2";
 
 type WebViewRef = { injectJavaScript?: (code: string) => void } | null;
 
@@ -76,20 +76,10 @@ export async function syncEntitlementToWebView(params: {
 }): Promise<void> {
   const { webRef } = params;
   try {
-    let premium = false;
-
-    // // First call with reset=true to get a full view of receipts (recommended when app starts).
-    let res: any = await PurchasingService.getPurchaseUpdates({ reset: true } as any);
-    if (res?.responseCode === PurchaseUpdatesResponseCode.SUCCESSFUL) {
-      premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
-      while (res?.hasMore) {
-        res = await PurchasingService.getPurchaseUpdates({ reset: false } as any);
-        if (res?.responseCode !== PurchaseUpdatesResponseCode.SUCCESSFUL) break;
-        premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);
-      }
-    }
-
-    sendToWebView(webRef, { type: "iap-premium-status", success: premium });
+    // TEST MODE:
+    // Keep web game non-premium so ads + remove-ads popup are always visible.
+    // Intentionally bypass purchase-updates entitlement sync.
+    sendToWebView(webRef, { type: "iap-premium-status", success: false });
   } catch (e) {
     // Don't flip premium on errors; just report false.
     sendToWebView(webRef, { type: "iap-premium-status", success: false });
@@ -136,8 +126,9 @@ export async function maybeHandleIapMessage(params: {
           await notifyFulfillmentFulfilled(receiptId);
         }
       }
-      // After a successful purchase, also push premium status to WebView.
-      sendToWebView(webRef, { type: "iap-premium-status", success: true });
+      // TEST MODE:
+      // Do not push premium=true to the web game; keep ad flow testable.
+      // sendToWebView(webRef, { type: "iap-premium-status", success: true });
     }
 
     sendToWebView(webRef, { type: "iap-result", success });
