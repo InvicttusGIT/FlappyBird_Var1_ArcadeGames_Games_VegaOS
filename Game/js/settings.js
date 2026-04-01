@@ -14,8 +14,8 @@ const minVelocity = 50
 
 const backgroundScrollSpeed = 20
 
-const verticalPipeGapMin = 400
-const verticalPipeGapMax = 450
+const verticalPipeGapMin = 450
+const verticalPipeGapMax = 600
 const fixedVerticalPipeGap = 400
 
 // Visual safety margins so pipes never disappear completely due to screen/top clipping
