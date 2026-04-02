@@ -140,7 +140,7 @@ function preload() {
     this.load.audio('score', 'assets/audio/score.mp3')
     this.load.audio('gameover', 'assets/audio/game-over.mp3')
     this.load.audio('backgroundMusic', 'assets/audio/background-music.mp3')
-    this.load.audio('gameplayLoopSound', 'assets/audio/flapps.mp3')
+    this.load.audio('gameplayLoopSound', 'assets/audio/wind.mp3')
 
     // New UI assets
     this.load.image(assets.ui.letsFlyButton, 'assets/btns/lets-fly.png')
