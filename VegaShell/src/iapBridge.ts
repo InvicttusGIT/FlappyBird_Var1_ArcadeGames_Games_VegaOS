@@ -5,7 +5,7 @@ import {
   PurchasingService,
 } from "@amazon-devices/keplerscript-appstore-iap-lib";
 
-const ENTITLEMENT_SKU = "com.essentials.flappywings.pack2";
+const ENTITLEMENT_SKU = "com.essentials.flappywings.pack1";
 
 type WebViewRef = { injectJavaScript?: (code: string) => void } | null;
 
