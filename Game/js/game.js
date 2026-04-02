@@ -586,6 +586,7 @@ function toggleMusic(scene) {
  */
 function update(t, dt) {
     const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
+    const flapHeld = !!(selectButton && selectButton.isDown)
     const leftPressed = Phaser.Input.Keyboard.JustDown(leftButton)
     const rightPressed = Phaser.Input.Keyboard.JustDown(rightButton)
     const upPressed = Phaser.Input.Keyboard.JustDown(upButton)
@@ -665,24 +666,24 @@ function update(t, dt) {
         return
     }
 
-    if (framesMoveUp > 0)
-        framesMoveUp--
-    else 
-    if (flapPressed )
-        propelPlayer()
-    else {
-        currentVelocity += gravity * (deltaMs / 1000)
+    const deltaSeconds = deltaMs / 1000
+    const isGlidingUp = flapHeld || upButton.isDown
+    const isGlidingDown = downButton.isDown && !isGlidingUp
 
-        if (currentVelocity > maxVelocity) {
-            currentVelocity = maxVelocity
-        }
-        player.setVelocityY(currentVelocity);
-
-        if (player.angle < 90 && currentVelocity > 0)
-        {
-            player.angle += 1.75
-        }
+    if (isGlidingUp) {
+        currentVelocity -= paperFlightUpAcceleration * deltaSeconds
+    } else if (isGlidingDown) {
+        currentVelocity += paperFlightDownAcceleration * 1.2 * deltaSeconds
+    } else {
+        currentVelocity += paperFlightDownAcceleration * deltaSeconds
     }
+
+    if (currentVelocity < -paperFlightMaxUpSpeed) currentVelocity = -paperFlightMaxUpSpeed
+    if (currentVelocity > paperFlightMaxDownSpeed) currentVelocity = paperFlightMaxDownSpeed
+    player.setVelocityY(currentVelocity)
+
+    const targetAngle = isGlidingUp ? paperFlightTiltUp : paperFlightTiltDown
+    player.angle += (targetAngle - player.angle) * paperFlightTiltLerp
 
     obstaclesGroup.children.iterate(function (child) {
         if (child == undefined)
@@ -924,10 +925,10 @@ function propelPlayer() {
     if (!gameStarted)
         startGame(game.scene.scenes[0])
 
-    currentVelocity = upwardVelocity
+    currentVelocity = -paperFlightMaxUpSpeed * 0.55
     player.setVelocityY(currentVelocity)
-    player.angle = -20
-    framesMoveUp = 5
+    player.angle = paperFlightTiltUp
+    framesMoveUp = 0
 }
 
 /**
@@ -1046,6 +1047,7 @@ function prepareGame(scene) {
     player = scene.physics.add.sprite(100, 250, assets.character.paperPlane)
     player.body.setCircle(13, 7, 2)
     player.setCollideWorldBounds(true)
+    // player.angle = 15
     player.body.allowGravity = false
     // Ensure hidden beneath start screen until gameplay begins
     if (!gameStarted) {
@@ -1093,7 +1095,7 @@ function startGame(scene) {
 
     propelPlayer() // give player an initial upward impulse
 
-    player.body.allowGravity = true
+    player.body.allowGravity = false
 
     // Display initial score (0) on top left and high score on top right
     updateScoreboard()

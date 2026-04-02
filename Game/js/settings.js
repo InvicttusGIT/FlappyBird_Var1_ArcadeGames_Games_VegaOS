@@ -14,8 +14,8 @@ const minVelocity = 50
 
 const backgroundScrollSpeed = 20
 
-const verticalObstacleGapMin = 450
-const verticalObstacleGapMax = 600
+const verticalObstacleGapMin = 430
+const verticalObstacleGapMax = 500
 const fixedVerticalObstacleGap = 400
 
 // Visual safety margins so obstacles never disappear completely due to screen/top clipping
@@ -29,12 +29,18 @@ const fixedHorizontalObstacleSetGap = 220
 
 const scoreToChangeLevel = 5
 
-const minGameSpeed = 120
+const minGameSpeed = 150
 const maxGameSpeed = 150
 const gameSpeedIncrement = 20
 
-const upwardVelocity = -250
-const gravity = 1500   // pixels per second^2
+// Paper-flight tuning: hold OK to glide up, release to glide down.
+const paperFlightUpAcceleration = 1400
+const paperFlightDownAcceleration = 700
+const paperFlightMaxUpSpeed = 220
+const paperFlightMaxDownSpeed = 170
+const paperFlightTiltUp = -12
+const paperFlightTiltDown = 50
+const paperFlightTiltLerp = 0.03
 
 const gameOverShakeDurationMs = 1000
 const gameOverShakeIntensity = 0.005
