@@ -27,9 +27,9 @@ const horizontalObstacleSetGapMax = 300
 const fixedHorizontalObstacleSetGap = 220
 
 
-const scoreToChangeLevel = 5
+const scoreToChangeLevel = 20
 
-const minGameSpeed = 150
+const minGameSpeed = 170
 const maxGameSpeed = 150
 const gameSpeedIncrement = 20
 
