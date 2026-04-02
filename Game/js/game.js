@@ -967,8 +967,8 @@ function updateHighScoreDisplay() {
     if (gameStarted && !gameOver && score > runHighScoreBaseline) {
         if (highScoreText) highScoreText.visible = false
         if (highScoreLabelText) highScoreLabelText.visible = false
-        scoreLabelText.setStroke(ORANGE_COLOR)
-        scoreText.setColor(ORANGE_COLOR)
+        scoreLabelText.setStroke(RED_COLOR)
+        scoreText.setColor(RED_COLOR)
         return
     }
 
