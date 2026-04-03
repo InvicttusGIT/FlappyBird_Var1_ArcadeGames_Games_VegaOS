@@ -601,7 +601,6 @@ function update(t, dt) {
     const leftPressed = Phaser.Input.Keyboard.JustDown(leftButton)
     const rightPressed = Phaser.Input.Keyboard.JustDown(rightButton)
     const upPressed = Phaser.Input.Keyboard.JustDown(upButton)
-    const downPressed = Phaser.Input.Keyboard.JustDown(downButton)
     const backPressed = Phaser.Input.Keyboard.JustDown(backButton)
     
     const deltaMs = dt || (this.game && this.game.loop ? this.game.loop.delta : 0) || 0
@@ -666,9 +665,6 @@ function update(t, dt) {
         if (upPressed) {
             if (startScreenFocus === 'play') setStartScreenFocus('music')
         }
-        if (downPressed) {
-            if (startScreenFocus === 'music') setStartScreenFocus('play')
-        }
 
         if (flapPressed) {
             if (startScreenFocus === 'play') attemptStartFromPlayButton()
@@ -679,15 +675,9 @@ function update(t, dt) {
 
     const deltaSeconds = deltaMs / 1000
     const isGlidingUp = flapHeld || upButton.isDown
-    const isGlidingDown = downButton.isDown && !isGlidingUp
-
-    if (isGlidingUp) {
-        currentVelocity -= paperFlightUpAcceleration * deltaSeconds
-    } else if (isGlidingDown) {
-        currentVelocity += paperFlightDownAcceleration * 1.2 * deltaSeconds
-    } else {
-        currentVelocity += paperFlightDownAcceleration * deltaSeconds
-    }
+    // Down input should not force a faster descent; the plane comes down naturally.
+    if (isGlidingUp) currentVelocity -= paperFlightUpAcceleration * deltaSeconds
+    else currentVelocity += paperFlightDownAcceleration * deltaSeconds
 
     if (currentVelocity < -paperFlightMaxUpSpeed) currentVelocity = -paperFlightMaxUpSpeed
     if (currentVelocity > paperFlightMaxDownSpeed) currentVelocity = paperFlightMaxDownSpeed
