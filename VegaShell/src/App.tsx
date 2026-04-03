@@ -264,7 +264,7 @@ export const App = () => {
           mediaPlaybackRequiresUserAction={false}
           allowsDefaultMediaControl={true}
           source={{
-            uri: "https://c2npfk3m-5500.asse.devtunnels.ms/"
+            uri: "https://flappywings.b-cdn.net/"
           }}
           javaScriptEnabled={true}
           onHttpError={() => {setWebFailed(true); hideSplashScreenCallback();}}
