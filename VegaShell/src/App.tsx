@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"; 
-import { BackHandler, StyleSheet, Text, View } from "react-native";
+import { AppState, BackHandler, StyleSheet, Text, View } from "react-native";
 import { WebView } from "@amazon-devices/webview";
 import {
   useHideSplashScreenCallback,
@@ -73,6 +73,44 @@ export const App = () => {
     }, 20000);
     return () => clearTimeout(timeout);
   }, [hideSplashScreenCallback]);
+
+  // Destroy Phaser game instance when app goes to background to release GPU resources
+  // This prevents the 146MB DRM memory leak that triggers LowMemoryKiller
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // Destroy Phaser game to release WebGL context and all GPU textures
+        if (webRef.current && typeof webRef.current.injectJavaScript === 'function') {
+          webRef.current.injectJavaScript(`
+            (function() {
+              try {
+                if (window.game && typeof window.game.destroy === 'function') {
+                  console.log('[Vega] Destroying Phaser game on background');
+                  // removeCanvas=true releases WebGL context; noReturn=false allows restart
+                  window.game.destroy(true, false);
+                  window.game = null;
+                }
+              } catch(e) {
+                console.error('[Vega] Failed to destroy game:', e);
+              }
+            })();
+          `);
+        }
+      } else if (nextAppState === 'active') {
+        // When returning to foreground, reload the page to recreate the game
+        // This ensures a clean state after GPU resources were released
+        if (webRef.current && typeof webRef.current.reload === 'function') {
+          try {
+            webRef.current.reload();
+          } catch (e) {
+            console.error('[Vega] Failed to reload WebView:', e);
+          }
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const handleWebViewMessage = useCallback(async (event: any) => {
     // Avoid React synthetic event pooling warnings by capturing data synchronously.

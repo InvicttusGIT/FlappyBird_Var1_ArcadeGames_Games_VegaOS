@@ -178,8 +178,20 @@ function createExitPopup(scene, options) {
     let visible = false
 
     function stopPulses() {
-        if (leavePulse) leavePulse.stop()
-        if (stayPulse) stayPulse.stop()
+        if (leavePulse) {
+            leavePulse.stop()
+            // Properly destroy tween to prevent memory accumulation
+            if (typeof leavePulse.remove === 'function') {
+                leavePulse.remove()
+            }
+        }
+        if (stayPulse) {
+            stayPulse.stop()
+            // Properly destroy tween to prevent memory accumulation
+            if (typeof stayPulse.remove === 'function') {
+                stayPulse.remove()
+            }
+        }
         leavePulse = null
         stayPulse = null
     }

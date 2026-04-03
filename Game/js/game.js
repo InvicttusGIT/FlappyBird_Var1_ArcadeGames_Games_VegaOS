@@ -2,11 +2,15 @@
 const configurations = createConfigurations(preload, create, update)
 const game = new Phaser.Game(configurations)
 
+// Store event handler references so they can be removed on cleanup
+let keydownHandler = null
+let nativeMessageHandler = null
+
 // Vega remote "GoBack" key (keyCode 27) is forwarded to the React Native shell
 // so the native app can decide how to exit. This relies on the WebView being
 // created with allowSystemKeyEvents={true}.
 try {
-    window.addEventListener('keydown', function (event) {
+    keydownHandler = function (event) {
         if (!event || event.keyCode !== 27) return
 
         try {
@@ -23,7 +27,8 @@ try {
 
         if (event.preventDefault) event.preventDefault()
         return false
-    })
+    }
+    window.addEventListener('keydown', keydownHandler)
 } catch (_) {
     // Swallow any unexpected errors in TV webview environments
 }
@@ -31,7 +36,7 @@ try {
 // Listen for messages from React Native (high score updates)
 // React Native WebView can send messages via window.postMessage or document events
 try {
-    const handleNativeMessage = function (event) {
+    nativeMessageHandler = function (event) {
         try {
             // React Native WebView sends messages via event.data
             const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -90,7 +95,7 @@ try {
     }
 
     // Listen for messages from React Native (high score updates) via MessageEvent.
-    window.addEventListener('message', handleNativeMessage)
+    window.addEventListener('message', nativeMessageHandler)
 } catch (_) {
     // Swallow any unexpected errors in TV webview environments
 }
@@ -558,7 +563,13 @@ function startPulse(target, baseScale, existingTween, options) {
 }
 
 function stopPulse(target, baseScale, existingTween) {
-    if (existingTween) existingTween.stop()
+    if (existingTween) {
+        existingTween.stop()
+        // Properly destroy tween to prevent memory accumulation
+        if (typeof existingTween.remove === 'function') {
+            existingTween.remove()
+        }
+    }
     target.setScale(baseScale)
     return null
 }
@@ -689,13 +700,13 @@ function update(t, dt) {
         if (child == undefined)
             return
 
-
-
-        if (child.x < -50)
-            child.destroy()
-        else
+        if (child.x < -50) {
+            // Return to pool instead of destroying (prevents GPU memory leak)
+            child.setActive(false).setVisible(false)
+            child.setVelocityX(0)
+        } else {
             child.setVelocityX(-currentGameSpeed)
-
+        }
     })
 
     gapsGroup.children.iterate(function (child) {
@@ -905,12 +916,30 @@ function makeObstacles(scene) {
     gap.body.setSize(1, gapLineHeight, true)
     gap.visible = false
 
-    const upperObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    // Use object pooling: get() reuses inactive sprites instead of creating new ones
+    let upperObstacle = obstaclesGroup.get(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    if (!upperObstacle) {
+        // Fallback: create new sprite only if pool is exhausted
+        upperObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    } else {
+        // Reactivate pooled sprite with new position and texture
+        upperObstacle.setActive(true).setVisible(true)
+        upperObstacle.setPosition(GAME_WIDTH, obstacleTopY)
+        upperObstacle.setTexture(currentObstacleSet.top)
+    }
     upperObstacle.body.setSize(upperObstacle.width - 20, upperObstacle.height - 12)
-
     upperObstacle.body.allowGravity = false
 
-    const lowerObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    let lowerObstacle = obstaclesGroup.get(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    if (!lowerObstacle) {
+        // Fallback: create new sprite only if pool is exhausted
+        lowerObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    } else {
+        // Reactivate pooled sprite with new position and texture
+        lowerObstacle.setActive(true).setVisible(true)
+        lowerObstacle.setPosition(GAME_WIDTH, obstacleTopY + verticalGap)
+        lowerObstacle.setTexture(currentObstacleSet.bottom)
+    }
     lowerObstacle.body.setSize(lowerObstacle.width - 20, lowerObstacle.height - 12)
     lowerObstacle.body.allowGravity = false
 }
@@ -991,7 +1020,6 @@ function restartGame() {
     if (adPlaying) return
     trackAnalyticsEvent('restart_btn_pressed')
     restartEnabled = false
-    obstaclesGroup.clear(true, true)
     obstaclesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     player.destroy()
