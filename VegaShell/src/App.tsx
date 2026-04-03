@@ -10,7 +10,7 @@ import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridg
 import { maybeHandleIapMessage, syncEntitlementToWebView } from "./iapBridge";
 import { initializeFirebaseAnalytics, trackNativeAnalyticsEvent } from "./analytics/analyticsBridge";
 
-const DEVICE_ID_KEY = "flappybird_device_uuid";
+const DEVICE_ID_KEY = "PaperFlight_device_uuid";
 function generateDeviceId(): string {
   // Generate a pseudo-unique ID: 3 random digits + current timestamp (ms)
   const rand3 = () => Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -221,7 +221,7 @@ export const App = () => {
     <View style={styles.container}>
       {webFailed ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Flappy Wings is unavailable</Text>
+          <Text style={styles.errorTitle}>Paper Flight is unavailable</Text>
           <Text style={styles.errorSubtitle}>
             Please check your connection or try again later.
           </Text>

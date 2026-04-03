@@ -1,6 +1,6 @@
 import AsyncStorage from "@amazon-devices/react-native-async-storage__async-storage";
 
-const HIGH_SCORE_KEY = "flappyBirdHighScore";
+const HIGH_SCORE_KEY = "paperFlightHighScore";
 
 function injectMessage(webRef: any, payload: unknown) {
   if (!webRef || !webRef.current || typeof webRef.current.injectJavaScript !== "function") {
