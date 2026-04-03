@@ -9,7 +9,7 @@ import { firebaseConfig } from "./firebaseConfig";
 
 type AnalyticsParams = Record<string, unknown>;
 
-const FIRST_OPEN_KEY = "flappybird_first_app_open_tracked";
+const FIRST_OPEN_KEY = "paperFlight_first_app_open_tracked";
 const SCORE_BUCKETS = new Set(["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "100+"]);
 const SCREEN_NAMES = new Set(["home", "gameplay", "gameover", "score"]);
 const DAY_MODES = new Set(["day", "night"]);

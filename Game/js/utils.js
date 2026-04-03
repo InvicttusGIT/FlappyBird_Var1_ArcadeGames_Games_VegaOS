@@ -113,7 +113,7 @@ function createExitPopup(scene, options) {
     const popupWidthRatio = typeof opts.popupWidthRatio === 'number' ? opts.popupWidthRatio : 0.8
     const popupHeightRatio = typeof opts.popupHeightRatio === 'number' ? opts.popupHeightRatio : 0.75
     const popupBgKey = opts.popupBgKey
-    const birdsKey = opts.birdsKey
+    const illustrationKey = opts.illustrationKey
     const headingImageKey = opts.headingImageKey
     const leaveKey = opts.leaveKey
     const stayKey = opts.stayKey
@@ -151,18 +151,19 @@ function createExitPopup(scene, options) {
     }
 
     const subheadingStyle = Object.assign({
-        fontFamily: 'jersey15',
+        fontFamily: 'shantell',
         fontSize: '24px',
-        color: '#000000',
+        color: '#242424',
         align: 'center',
     }, opts.subheadingStyle || {})
     const subheading = scene.add.text(0, heading.y + 48, opts.subheadingText || 'Are You Sure You Want To Stop Flying?', subheadingStyle).setOrigin(0.5)
 
-    const birds = scene.add.image(0, subheading.y + 80, birdsKey).setOrigin(0.5)
-    fitImageToBox(birds, popupWidth * 0.6, popupHeight * 0.20)
+    const illustration = scene.add.image(0, subheading.y + 80, illustrationKey).setOrigin(0.5)
+    fitImageToBox(illustration, popupWidth * 0.6, popupHeight * 0.20)
 
     const buttonsY = popupHeight * 0.28
-    const buttonOffset = popupWidth * 0.15
+    const buttonOffsetRatio = typeof opts.buttonOffsetRatio === 'number' ? opts.buttonOffsetRatio : 0.12
+    const buttonOffset = popupWidth * buttonOffsetRatio
     // Start with unfocused textures
     const leaveBtn = scene.add.image(-buttonOffset, buttonsY, leaveKeyUnfocused).setOrigin(0.5).setInteractive()
     const stayBtn = scene.add.image(buttonOffset, buttonsY, stayKeyUnfocused).setOrigin(0.5).setInteractive()
@@ -177,8 +178,20 @@ function createExitPopup(scene, options) {
     let visible = false
 
     function stopPulses() {
-        if (leavePulse) leavePulse.stop()
-        if (stayPulse) stayPulse.stop()
+        if (leavePulse) {
+            leavePulse.stop()
+            // Properly destroy tween to prevent memory accumulation
+            if (typeof leavePulse.remove === 'function') {
+                leavePulse.remove()
+            }
+        }
+        if (stayPulse) {
+            stayPulse.stop()
+            // Properly destroy tween to prevent memory accumulation
+            if (typeof stayPulse.remove === 'function') {
+                stayPulse.remove()
+            }
+        }
         leavePulse = null
         stayPulse = null
     }
@@ -241,7 +254,7 @@ function createExitPopup(scene, options) {
     leaveBtn.on('pointerdown', () => { setFocus('leave'); confirm() })
     stayBtn.on('pointerdown', () => { setFocus('stay'); confirm() })
 
-    container.add([popupBg, heading, subheading, birds, leaveBtn, stayBtn])
+    container.add([popupBg, heading, subheading, illustration, leaveBtn, stayBtn])
 
     return {
         show,

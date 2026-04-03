@@ -78,7 +78,7 @@ export async function syncEntitlementToWebView(params: {
   try {
     let premium = false;
 
-    // // First call with reset=true to get a full view of receipts (recommended when app starts).
+    // First call with reset=true to get a full view of receipts (recommended when app starts).
     let res: any = await PurchasingService.getPurchaseUpdates({ reset: true } as any);
     if (res?.responseCode === PurchaseUpdatesResponseCode.SUCCESSFUL) {
       premium = premium || isEntitlementActiveFromReceipts(res?.receiptList || []);

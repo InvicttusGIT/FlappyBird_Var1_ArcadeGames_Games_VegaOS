@@ -12,13 +12,13 @@ let downButton
 let backButton
 let restartButton
 let gameOverBanner
-let messageInitial
 
 // Start screen UI
 let startUiContainer
 let startTitleImage
 let playButtonImage
 let playHintText
+let startBackgroundImage
 let playButtonFocused = false
 let playPulseTween
 let playButtonBaseScale = 1
@@ -39,20 +39,18 @@ let restartEnableTimer
 let restartEnabled = false
 
 let player
-let birdName
 let framesMoveUp
 
-let backgroundDay
-let backgroundNight
+let backgroundMain
 
 let groundCollider
 let groundSprite
 
-let pipesGroup
+let obstaclesGroup
 let gapsGroup
-let pipeTravelDistanceSinceLast
-let nextPipeSpawnDistance
-let currentPipe
+let obstacleTravelDistanceSinceLast
+let nextObstacleSpawnDistance
+let currentObstacleSet
 
 let scoreText
 let scoreLabelText
@@ -94,7 +92,6 @@ let bestMilestonesTracked = {}
 let hasViewedGameplay = false
 
 let currentVelocity = minVelocity
-let isDayTheme = true
 
 let debugText
 let backHandlerAttached = false
@@ -109,7 +106,7 @@ let flapSound
 let gameOverSound
 let scoreSound
 let backgroundMusic
-let flappsBackground
+let gameplayLoopSound
 
 // Exit popup
 let exitPopup

@@ -2,11 +2,15 @@
 const configurations = createConfigurations(preload, create, update)
 const game = new Phaser.Game(configurations)
 
+// Store event handler references so they can be removed on cleanup
+let keydownHandler = null
+let nativeMessageHandler = null
+
 // Vega remote "GoBack" key (keyCode 27) is forwarded to the React Native shell
 // so the native app can decide how to exit. This relies on the WebView being
 // created with allowSystemKeyEvents={true}.
 try {
-    window.addEventListener('keydown', function (event) {
+    keydownHandler = function (event) {
         if (!event || event.keyCode !== 27) return
 
         try {
@@ -23,7 +27,8 @@ try {
 
         if (event.preventDefault) event.preventDefault()
         return false
-    })
+    }
+    window.addEventListener('keydown', keydownHandler)
 } catch (_) {
     // Swallow any unexpected errors in TV webview environments
 }
@@ -31,7 +36,7 @@ try {
 // Listen for messages from React Native (high score updates)
 // React Native WebView can send messages via window.postMessage or document events
 try {
-    const handleNativeMessage = function (event) {
+    nativeMessageHandler = function (event) {
         try {
             // React Native WebView sends messages via event.data
             const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -90,7 +95,7 @@ try {
     }
 
     // Listen for messages from React Native (high score updates) via MessageEvent.
-    window.addEventListener('message', handleNativeMessage)
+    window.addEventListener('message', nativeMessageHandler)
 } catch (_) {
     // Swallow any unexpected errors in TV webview environments
 }
@@ -124,32 +129,33 @@ function preload() {
         loadingBarFill.destroy()
     })
 
-    // Backgrounds and ground
-    this.load.image(assets.scene.background.day, 'assets/background-day.png')
-    this.load.image(assets.scene.background.night, 'assets/background-night.png')
-    this.load.image(assets.scene.ground.day, 'assets/ground-day.png')
-    this.load.image(assets.scene.ground.night, 'assets/ground-night.png')
+    // Single background and ground
+    this.load.image(assets.scene.background, 'assets/background-main.png')
+    this.load.image(assets.scene.ground, 'assets/ground-main.png')
+    // Start screen dedicated background
+    this.load.image(assets.scene.startBackground, 'assets/background-start-screen.png')
 
-    // Pipes
-    this.load.image(assets.obstacle.pipe.green.top, 'assets/pipe-green-top.png')
-    this.load.image(assets.obstacle.pipe.green.bottom, 'assets/pipe-green-bottom.png')
-    this.load.image(assets.obstacle.pipe.red.top, 'assets/pipe-red-top.png')
-    this.load.image(assets.obstacle.pipe.red.bottom, 'assets/pipe-red-bottom.png')
+    // Level obstacles: pencil and ruler sets
+    this.load.image(assets.obstacles.pencil.top, 'assets/pencil-top.png')
+    this.load.image(assets.obstacles.pencil.bottom, 'assets/pencil-bottom.png')
+    this.load.image(assets.obstacles.ruler.top, 'assets/ruler-top.png')
+    this.load.image(assets.obstacles.ruler.bottom, 'assets/ruler-bottom.png')
 
     // Audio
     this.load.audio('score', 'assets/audio/score.mp3')
     this.load.audio('gameover', 'assets/audio/game-over.mp3')
     this.load.audio('backgroundMusic', 'assets/audio/background-music.mp3')
-    this.load.audio('flappsBackground', 'assets/audio/flapps.mp3')
+    this.load.audio('gameplayLoopSound', 'assets/audio/wind.mp3')
 
-    // Start game
-    this.load.image(assets.ui.title, 'assets/FlappyWings.png')
-    this.load.image(assets.ui.playButton, 'assets/btns/play-button.png')
-    this.load.image(assets.ui.musicOn, 'assets/btns/music-on.png')
-    this.load.image(assets.ui.musicOff, 'assets/btns/music-off.png')
+    // New UI assets
+    this.load.image(assets.ui.letsFlyButton, 'assets/btns/lets-fly.png')
+    this.load.image(assets.ui.soundOnFocused, 'assets/btns/sound-focus-on.png')
+    this.load.image(assets.ui.soundOnUnfocused, 'assets/btns/sound-unfocus-on.png')
+    this.load.image(assets.ui.soundOffUnfocused, 'assets/btns/sound-unfocus-off.png')
+    this.load.image(assets.ui.soundOffFocused, 'assets/btns/sound-focus-off.png')
     this.load.image(assets.ui.exitPopupBg, 'assets/popup-bg.png')
     this.load.image(assets.ui.exitHeadingImage, 'assets/Leaving the sky.png')
-    this.load.image(assets.ui.exitBirds, 'assets/birds.png')
+    this.load.image(assets.ui.exitPlaneIllustration, 'assets/plane.png')
     this.load.image(assets.ui.exitLeaveButton, 'assets/btns/leave-uf.png')
     this.load.image(assets.ui.exitStayButton, 'assets/btns/keep-playing-uf.png')
     this.load.image(assets.ui.exitLeaveButtonFocused, 'assets/btns/leave-focused.png')
@@ -167,59 +173,42 @@ function preload() {
     this.load.image(assets.ui.removeAdsNotNowButtonUnfocused, 'assets/btns/not-now-uf.png')
     this.load.image(assets.ui.removeAdsGoAdFreeButtonUnfocused, 'assets/btns/go-ads-free-uf.png')
 
-    // End game
-    this.load.image(assets.scene.gameOver, 'assets/gameover.png')
-    this.load.image(assets.scene.restart, 'assets/btns/restart-button.png')
+    this.load.image(assets.ui.restartButton, 'assets/btns/restart.png')
 
-    // Birds
-    this.load.spritesheet(assets.bird.red, 'assets/bird-red-sprite.png', {
-        frameWidth: 34,
-        frameHeight: 24
-    })
-    this.load.spritesheet(assets.bird.blue, 'assets/bird-blue-sprite.png', {
-        frameWidth: 34,
-        frameHeight: 24
-    })
-    this.load.spritesheet(assets.bird.yellow, 'assets/bird-yellow-sprite.png', {
-        frameWidth: 34,
-        frameHeight: 24
-    })
+    // Paper plane character (single sprite)
+    this.load.image(assets.character.paperPlane, 'assets/paper-plane.png')
 
-    this.load.font('jersey15', 'assets/font/Jersey15.ttf')
+    // Use new ShantellSans font for all UI text
+    this.load.font('shantell', 'assets/font/ShantellSans.ttf')
 }
 
 /**
  *   Create the game objects (images, groups, sprites and animations).
  */
 function create() {
-    backgroundDay = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.day).setInteractive()
-    backgroundDay.on('pointerdown', () => {
+    // Start screen static background (shown only on start screen)
+    startBackgroundImage = this.add.image(GAME_CENTER_X, GAME_HEIGHT / 2, assets.scene.startBackground)
+    startBackgroundImage.setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+    startBackgroundImage.setDepth(0)
+    startBackgroundImage.visible = true
+
+    backgroundMain = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background).setInteractive()
+    backgroundMain.on('pointerdown', () => {
         // Prevent accidental start on TVs: only flap when game already started.
-        if (gameStarted && !gameOver) moveBird()
-        else setPlayButtonFocus(true)
-    })
-    backgroundNight = this.add.tileSprite(assets.scene.width, 256, GAME_WIDTH, GAME_HEIGHT, assets.scene.background.night).setInteractive()
-    backgroundNight.visible = false
-    backgroundNight.on('pointerdown', () => {
-        if (gameStarted && !gameOver) moveBird()
+        if (gameStarted && !gameOver) propelPlayer()
         else setPlayButtonFocus(true)
     })
 
     gapsGroup = this.physics.add.group()
-    pipesGroup = this.physics.add.group()
+    obstaclesGroup = this.physics.add.group()
 
     const groundY = 458
-    // Start with day ground; will be toggled with theme changes
-    groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground.day)
+    groundSprite = this.add.tileSprite(GAME_WIDTH / 2, groundY, GAME_WIDTH, 112, assets.scene.ground)
     groundSprite.setDepth(10)
 
-    groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground.day)
+    groundCollider = this.physics.add.staticSprite(GAME_WIDTH / 2, groundY, assets.scene.ground)
     groundCollider.setVisible(false)
     groundCollider.setSize(GAME_WIDTH, 108, true)
-
-    messageInitial = this.add.image(assets.scene.width, 156, assets.scene.messageInitial)
-    messageInitial.setDepth(30)
-    messageInitial.visible = false
 
     selectButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
     leftButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
@@ -237,63 +226,6 @@ function create() {
         }.bind(this))
     }
 
-    // Red Bird Animations
-    this.anims.create({
-        key: assets.animation.bird.red.clapWings,
-        frames: this.anims.generateFrameNumbers(assets.bird.red, {
-            start: 0,
-            end: 2
-        }),
-        frameRate: 10,
-        repeat: -1
-    })
-    this.anims.create({
-        key: assets.animation.bird.red.stop,
-        frames: [{
-            key: assets.bird.red,
-            frame: 1
-        }],
-        frameRate: 20
-    })
-
-    // Blue Bird animations
-    this.anims.create({
-        key: assets.animation.bird.blue.clapWings,
-        frames: this.anims.generateFrameNumbers(assets.bird.blue, {
-            start: 0,
-            end: 2
-        }),
-        frameRate: 10,
-        repeat: -1
-    })
-    this.anims.create({
-        key: assets.animation.bird.blue.stop,
-        frames: [{
-            key: assets.bird.blue,
-            frame: 1
-        }],
-        frameRate: 20
-    })
-
-    // Yellow Bird animations
-    this.anims.create({
-        key: assets.animation.bird.yellow.clapWings,
-        frames: this.anims.generateFrameNumbers(assets.bird.yellow, {
-            start: 0,
-            end: 2
-        }),
-        frameRate: 10,
-        repeat: -1
-    })
-    this.anims.create({
-        key: assets.animation.bird.yellow.stop,
-        frames: [{
-            key: assets.bird.yellow,
-            frame: 1
-        }],
-        frameRate: 20
-    })
-
     // Background music: play continuously in loop without any trigger.
     // This is created once per scene and respects the global sound mute toggle.
     backgroundMusic = this.sound.add('backgroundMusic', {
@@ -304,13 +236,17 @@ function create() {
 
     prepareGame(this)
 
-    gameOverBanner = this.add.image(assets.scene.width, 206, assets.scene.gameOver)
-    // Match the start screen FlappyWings size (same max box)
-    fitImageToBox(gameOverBanner, 400, 200)
+    // New text-based Game Over heading (centered horizontally, slightly larger)
+    gameOverBanner = this.add.text(GAME_CENTER_X, 190, 'GAME OVER', {
+        fontFamily: 'shantell',
+        fontSize: '55px',
+        color: '#353535'
+    })
+    gameOverBanner.setOrigin(0.5, 0.5)
     gameOverBanner.setDepth(20)
     gameOverBanner.visible = false
 
-    restartButton = this.add.image(assets.scene.width, 300, assets.scene.restart).setInteractive()
+    restartButton = this.add.image(assets.scene.width, 300, assets.ui.restartButton).setInteractive()
     restartButton.on('pointerdown', restartGame)
     // Match the start screen play button size (same max box)
     fitImageToBox(restartButton, 200, 100)
@@ -318,22 +254,18 @@ function create() {
     restartButton.visible = false
     restartButtonBaseScale = restartButton.scaleX
 
-    // Score text style with blue color and white stroke (reused for UI copy)
+    // Score text style - Shantell, solid blue, no outline
     const scoreTextStyle = {
-        fontFamily: 'jersey15',
+        fontFamily: 'shantell',
         fontSize: '50px',
-        color: SCORE_BLUE_COLOR,
-        stroke: SCORE_WHITE_COLOR,
-        strokeThickness: 6
+        color: '#326BFB'
     }
 
-    // Label text style (white color, smaller font)
+    // Label text style - Shantell, same blue, no outline
     const labelTextStyle = {
-        fontFamily: 'jersey15',
+        fontFamily: 'shantell',
         fontSize: '18px',
-        color: SCORE_WHITE_COLOR,
-        stroke: SCORE_BLUE_COLOR,
-        strokeThickness: 3,
+        color: '#326BFB',
         letterSpacing: 2
     }
 
@@ -343,9 +275,8 @@ function create() {
     scoreText.setDepth(10)
     scoreText.visible = false
 
-    // Create score label (below score text, 30px margin from bottom of number)
-    // Number is 150px font size, so label at 30 + 150 + 30 = 210
-    scoreLabelText = this.add.text(40, 60, 'CURRENT SCORE', labelTextStyle)
+    // Create score label (give a bit more breathing room under the digits)
+    scoreLabelText = this.add.text(40, 70, 'Current Score', labelTextStyle)
     scoreLabelText.setOrigin(0, 0)
     scoreLabelText.setDepth(10)
     scoreLabelText.visible = false
@@ -356,8 +287,8 @@ function create() {
     highScoreText.setDepth(10)
     highScoreText.visible = false
 
-    // Create high score label (below high score text, 30px margin from bottom of number)
-    highScoreLabelText = this.add.text(GAME_WIDTH - 40, 60, 'HIGH SCORE', labelTextStyle)
+    // Create high score label with same vertical gap as current score
+    highScoreLabelText = this.add.text(GAME_WIDTH - 40, 70, 'High Score', labelTextStyle)
     highScoreLabelText.setOrigin(1, 0)  // Right-aligned
     highScoreLabelText.setDepth(10)
     highScoreLabelText.visible = false
@@ -370,7 +301,7 @@ function create() {
     const scene = this
     exitPopup = createExitPopup(scene, {
         popupBgKey: assets.ui.exitPopupBg,
-        birdsKey: assets.ui.exitBirds,
+        illustrationKey: assets.ui.exitPlaneIllustration,
         headingImageKey: assets.ui.exitHeadingImage,
         leaveKey: assets.ui.exitLeaveButton,
         stayKey: assets.ui.exitStayButton,
@@ -387,7 +318,7 @@ function create() {
             if (exitPopup) exitPopup.hide()
             if (exitPopupPausedGame) {
                 scene.physics.resume()
-                moveBird()
+                propelPlayer()
                 exitPopupPausedGame = false
             }
         }
@@ -398,7 +329,7 @@ function create() {
         // Keep popup open after "Go Ad-Free" until native sends iap-result success/fail.
         autoHideOnStay: false,
         popupBgKey: assets.ui.exitPopupBg,
-        birdsKey: assets.ui.removeAdsPriceImage,
+        illustrationKey: assets.ui.removeAdsPriceImage,
         headingImageKey: assets.ui.removeAdsHeadingImage,
         // Make remove-ads headline wider and slightly taller than exit headline
         headingWidthRatio: 0.8,
@@ -464,36 +395,39 @@ function createStartScreenUI(scene, scoreTextStyle) {
     startUiContainer = scene.add.container(GAME_CENTER_X, GAME_HEIGHT / 2)
     startUiContainer.setDepth(50)
 
-    startTitleImage = scene.add.image(0, -50, assets.ui.title)
+    // New heading text: "Paper Flight" (match game-over spacing to button)
+    // Game over: heading at ~190, button at ~300 => delta ~110.
+    // Here we keep the same relative gap: heading at -60, button at +50.
+    startTitleImage = scene.add.text(0, -70, 'Paper Flight', {
+        fontFamily: 'shantell',
+        fontSize: '55px',
+        color: '#353535'
+    })
     startTitleImage.setOrigin(0.5, 0.5)
-    // FlappyWings target size: fit within ~500w x 250h
-    fitImageToBox(startTitleImage, 500, 250)
 
-    playButtonImage = scene.add.image(0, 30, assets.ui.playButton).setInteractive()
+    // New circular "LET'S FLY" button
+    playButtonImage = scene.add.image(0, 35, assets.ui.letsFlyButton).setInteractive()
     playButtonImage.setOrigin(0.5, 0.5)
-    // Play button size control (tweak as desired)
-    fitImageToBox(playButtonImage, 200, 100)
-    // Store base scale so focus tween doesn't override the resized value
+    // Smaller box + extra scale-down so it is clearly smaller than restart button
+    fitImageToBox(playButtonImage, 150, 150)
+    playButtonImage.setScale(playButtonImage.scaleX * 0.75)
     playButtonBaseScale = playButtonImage.scaleX
 
-    // Hint text (only visible when play button is focused)
+    // New hint text with updated font/color (smaller, to de‑emphasize)
     playHintText = scene.add.text(
         0,
-        80,
+        115,
         'PRESS "OK" TO FLY',
         {
-            fontFamily: scoreTextStyle.fontFamily || 'jersey15',
-            fontSize: '28px',
-            color: SCORE_BLUE_COLOR,
-            stroke: SCORE_WHITE_COLOR,
-            strokeThickness: 6,
-            letterSpacing: 2
+            fontFamily: 'shantell',
+            fontSize: '22px',
+            color: '#353535',
         }
     )
     playHintText.setOrigin(0.5, 0.5)
     playHintText.visible = false
 
-     startUiContainer.add([startTitleImage, playButtonImage, playHintText])
+    startUiContainer.add([startTitleImage, playButtonImage, playHintText])
 
     // Pointer focus behavior (mouse/touch)
     playButtonImage.on('pointerover', () => setStartScreenFocus('play'))
@@ -504,14 +438,15 @@ function createStartScreenUI(scene, scoreTextStyle) {
     })
 
     // Music toggle icon (top-right, same placement as high score numbers)
-    musicToggleImage = scene.add.image(GAME_WIDTH - 50, 30, assets.ui.musicOn).setOrigin(1, 0).setInteractive()
+    // Existing focus/press behavior retained; we only swap textures.
+    musicToggleImage = scene.add.image(GAME_WIDTH - 50, 30, assets.ui.soundOnUnfocused).setOrigin(1, 0).setInteractive()
     musicToggleImage.setDepth(60)
     musicToggleImage.on('pointerdown', () => {
         setStartScreenFocus('music')
         toggleMusic(scene)
     })
     // Music icon size control (tweak as desired)
-    fitImageToBox(musicToggleImage, 50, 50)
+    fitImageToBox(musicToggleImage, 64, 64)
     musicButtonBaseScale = musicToggleImage.scaleX
     musicToggleImage.on('pointerover', () => setStartScreenFocus('music'))
     musicToggleImage.on('pointerout', () => {})
@@ -533,9 +468,14 @@ function sendExitGame() {
 function setStartScreenVisible(visible) {
     if (startUiContainer) startUiContainer.visible = visible
     if (musicToggleImage) musicToggleImage.visible = visible
-
-    // Keep existing messageInitial hidden (legacy)
-    if (messageInitial) messageInitial.visible = false
+    if (startBackgroundImage) startBackgroundImage.visible = visible
+    // Hide gameplay background/ground while start screen is visible
+    if (backgroundMain) backgroundMain.visible = !visible
+    if (groundSprite) groundSprite.visible = !visible
+    // Hide player while start screen is shown
+    if (player) {
+        player.visible = !visible
+    }
 
     // Hide score UI on start screen
     if (visible) {
@@ -605,8 +545,14 @@ function setMusicButtonPulse(scene, enabled) {
             scale: 1.06,
             duration: 450
         })
+        musicToggleImage.setTexture(
+            isMusicOn ? assets.ui.soundOnFocused : assets.ui.soundOffFocused
+        )
     } else {
         musicPulseTween = stopPulse(musicToggleImage, musicButtonBaseScale, musicPulseTween)
+        musicToggleImage.setTexture(
+            isMusicOn ? assets.ui.soundOnUnfocused : assets.ui.soundOffUnfocused
+        )
     }
 }
 
@@ -617,7 +563,13 @@ function startPulse(target, baseScale, existingTween, options) {
 }
 
 function stopPulse(target, baseScale, existingTween) {
-    if (existingTween) existingTween.stop()
+    if (existingTween) {
+        existingTween.stop()
+        // Properly destroy tween to prevent memory accumulation
+        if (typeof existingTween.remove === 'function') {
+            existingTween.remove()
+        }
+    }
     target.setScale(baseScale)
     return null
 }
@@ -626,7 +578,11 @@ function toggleMusic(scene) {
     isMusicOn = !isMusicOn
     trackAnalyticsEvent('music_' + (isMusicOn ? 'on' : 'off'))
     if (musicToggleImage) {
-        musicToggleImage.setTexture(isMusicOn ? assets.ui.musicOn : assets.ui.musicOff)
+        musicToggleImage.setTexture(
+            isMusicOn
+                ? (startScreenFocus === 'music' ? assets.ui.soundOnFocused : assets.ui.soundOnUnfocused)
+                : (startScreenFocus === 'music' ? assets.ui.soundOffFocused : assets.ui.soundOffUnfocused)
+        )
     }
 
     // If you later re-enable bg music, wire it here.
@@ -637,10 +593,11 @@ function toggleMusic(scene) {
 }
 
 /**
- *  Update the scene frame by frame, responsible for move and rotate the bird and to create and move the pipes.
+ *  Update the scene frame by frame, responsible for move and rotate the player and to create and move obstacles.
  */
 function update(t, dt) {
     const flapPressed = Phaser.Input.Keyboard.JustDown(selectButton) 
+    const flapHeld = !!(selectButton && selectButton.isDown)
     const leftPressed = Phaser.Input.Keyboard.JustDown(leftButton)
     const rightPressed = Phaser.Input.Keyboard.JustDown(rightButton)
     const upPressed = Phaser.Input.Keyboard.JustDown(upButton)
@@ -688,10 +645,7 @@ function update(t, dt) {
     //background image parallax effect
     if (!gameOver) {
     const parallaxDeltaBg = backgroundScrollSpeed * (deltaMs / 1000)
-    if (backgroundDay.visible)
-        backgroundDay.tilePositionX += parallaxDeltaBg
-    if (backgroundNight.visible)
-        backgroundNight.tilePositionX += parallaxDeltaBg
+    backgroundMain.tilePositionX += parallaxDeltaBg
     if (!gameOver)
         groundSprite.tilePositionX += currentGameSpeed * (deltaMs / 1000)
     }
@@ -723,55 +677,55 @@ function update(t, dt) {
         return
     }
 
-    if (framesMoveUp > 0)
-        framesMoveUp--
-    else 
-    if (flapPressed )
-        moveBird()
-    else {
-        currentVelocity += gravity * (deltaMs / 1000)
+    const deltaSeconds = deltaMs / 1000
+    const isGlidingUp = flapHeld || upButton.isDown
+    const isGlidingDown = downButton.isDown && !isGlidingUp
 
-        if (currentVelocity > maxVelocity) {
-            currentVelocity = maxVelocity
-        }
-        player.setVelocityY(currentVelocity);
-
-        if (player.angle < 90 && currentVelocity > 0)
-        {
-            player.angle += 1.75
-        }
+    if (isGlidingUp) {
+        currentVelocity -= paperFlightUpAcceleration * deltaSeconds
+    } else if (isGlidingDown) {
+        currentVelocity += paperFlightDownAcceleration * 1.2 * deltaSeconds
+    } else {
+        currentVelocity += paperFlightDownAcceleration * deltaSeconds
     }
 
-    pipesGroup.children.iterate(function (child) {
+    if (currentVelocity < -paperFlightMaxUpSpeed) currentVelocity = -paperFlightMaxUpSpeed
+    if (currentVelocity > paperFlightMaxDownSpeed) currentVelocity = paperFlightMaxDownSpeed
+    player.setVelocityY(currentVelocity)
+
+    const targetAngle = isGlidingUp ? paperFlightTiltUp : paperFlightTiltDown
+    player.angle += (targetAngle - player.angle) * paperFlightTiltLerp
+
+    obstaclesGroup.children.iterate(function (child) {
         if (child == undefined)
             return
 
-
-
-        if (child.x < -50)
-            child.destroy()
-        else
+        if (child.x < -50) {
+            // Return to pool instead of destroying (prevents GPU memory leak)
+            child.setActive(false).setVisible(false)
+            child.setVelocityX(0)
+        } else {
             child.setVelocityX(-currentGameSpeed)
-
+        }
     })
 
     gapsGroup.children.iterate(function (child) {
         child.body.setVelocityX(-currentGameSpeed)
     })
 
-    pipeTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
-    if (pipeTravelDistanceSinceLast >= nextPipeSpawnDistance) {
-        makePipes(game.scene.scenes[0])
-        pipeTravelDistanceSinceLast = 0
-        nextPipeSpawnDistance = getHorizontalPipeSetGap()
+    obstacleTravelDistanceSinceLast += currentGameSpeed * (deltaMs / 1000)
+    if (obstacleTravelDistanceSinceLast >= nextObstacleSpawnDistance) {
+        makeObstacles(game.scene.scenes[0])
+        obstacleTravelDistanceSinceLast = 0
+        nextObstacleSpawnDistance = getHorizontalObstacleSetGap()
     }
 }
 
 /**
- *  Bird collision event.
- *  @param {object} player - Game object that collided, in this case the bird. 
+ *  Player collision event.
+ *  @param {object} player - Game object that collided, in this case the player. 
  */
-function hitBird(player) {
+function handlePlayerHit(player) {
     this.physics.pause()
     gameOver = true
     gameStarted = false
@@ -781,13 +735,12 @@ function hitBird(player) {
     trackAnalyticsEvent('player_crash', { crashCount: crashCount, score: score })
     trackAnalyticsEvent('view_gameover')
 
-    player.anims.play(getAnimationBird(birdName).stop)
     this.cameras.main.shake(gameOverShakeDurationMs, gameOverShakeIntensity)
 
     // Stop gameplay background loop on game over
-    if (flappsBackground && flappsBackground.isPlaying) {
+    if (gameplayLoopSound && gameplayLoopSound.isPlaying) {
         try {
-            flappsBackground.stop()
+            gameplayLoopSound.stop()
         } catch (_) {}
     }
 
@@ -873,7 +826,7 @@ function hitBird(player) {
 
 /**
  *   Update the scoreboard.
- *   @param {object} _ - Game object that overlapped, in this case the bird (ignored).
+ *   @param {object} _ - Game object that overlapped, in this case the player (ignored).
  *   @param {object} gap - Game object that was overlapped, in this case the gap.
  */
 function updateScore(_, gap) {
@@ -893,58 +846,69 @@ function updateScore(_, gap) {
 }
 
 function advanceLevel() {
-    toggleThemeAndPipes()
+    toggleObstaclesByLevel()
 }
 
-function toggleThemeAndPipes() {
-    isDayTheme = !isDayTheme
-    trackAnalyticsEvent('game_bg_' + (isDayTheme ? 'day' : 'night'))
+function toggleObstaclesByLevel() {
+    const nextObstacleSet =
+        currentObstacleSet === assets.obstacles.pencil
+            ? assets.obstacles.ruler
+            : assets.obstacles.pencil
+    currentObstacleSet = nextObstacleSet
 
-    backgroundDay.visible = isDayTheme
-    backgroundNight.visible = !isDayTheme
-
-    // Toggle ground visuals with theme
-    if (groundSprite) {
-        groundSprite.setTexture(
-            isDayTheme ? assets.scene.ground.day : assets.scene.ground.night
-        )
-    }
-
-    currentPipe = isDayTheme ? assets.obstacle.pipe.green : assets.obstacle.pipe.red
-
-    pipesGroup.children.iterate(function (child) {
+    obstaclesGroup.children.iterate(function (child) {
         if (!child)
             return
-        if (child.texture && (child.texture.key === assets.obstacle.pipe.green.top || child.texture.key === assets.obstacle.pipe.red.top))
-            child.setTexture(currentPipe.top)
-        else if (child.texture && (child.texture.key === assets.obstacle.pipe.green.bottom || child.texture.key === assets.obstacle.pipe.red.bottom))
-            child.setTexture(currentPipe.bottom)
+        if (child.texture && (child.texture.key === assets.obstacles.pencil.top || child.texture.key === assets.obstacles.ruler.top))
+            child.setTexture(currentObstacleSet.top)
+        else if (child.texture && (child.texture.key === assets.obstacles.pencil.bottom || child.texture.key === assets.obstacles.ruler.bottom))
+            child.setTexture(currentObstacleSet.bottom)
     })
 }
 
-function getVerticalPipeGap() {
-    if (useRandomPipeGaps)
-        return getRandomBetween(verticalPipeGapMin, verticalPipeGapMax)
-    return fixedVerticalPipeGap
-}
-
-function getHorizontalPipeSetGap() {
-    if (useRandomPipeGaps)
-        return getRandomBetween(horizontalPipeSetGapMin, horizontalPipeSetGapMax)
-    return fixedHorizontalPipeSetGap
+function getHorizontalObstacleSetGap() {
+    return getRandomBetween(horizontalObstacleSetGapMin, horizontalObstacleSetGapMax)
 }
 
 /**
- * Create pipes and gap in the game.
+ * Create obstacle pair and score gap in the game.
  * @param {object} scene - Game scene.
  */
-function makePipes(scene) {
+function makeObstacles(scene) {
     if (!gameStarted || gameOver) return
 
-    const pipeTopY = Phaser.Math.Between(-120, 120)
-    const verticalGap = getVerticalPipeGap()
+    // Obstacle sprites use center-origin; keep the lower obstacle's top edge
+    // from being fully covered by the ground visuals.
+    //
+    // groundSprite: center at y=458 with height=112 => ground top boundary is 402.
+    const groundY = 458
+    const groundSpriteHeight = 112
+    const groundTopY = groundY - groundSpriteHeight / 2
 
-    const gapCenterY = pipeTopY + (verticalGap / 2)
+    // Obstacle asset height is 256 => half is 128.
+    const obstacleHeight = 256
+    const obstacleHalfHeight = obstacleHeight / 2
+
+    const verticalGap = getRandomBetween(verticalObstacleGapMin, verticalObstacleGapMax)
+
+    // Ensure at least N pixels of the upper obstacle remain visible below the screen top.
+    // Upper obstacle bottom edge = obstacleTopY + obstacleHalfHeight.
+    const obstacleTopYMinFromTopVisibility = obstacleMinVisiblePx - obstacleHalfHeight
+
+    // Ensure at least N pixels of the lower obstacle remain visible above the ground overlay.
+    // Lower obstacle top edge = (obstacleTopY + verticalGap) - obstacleHalfHeight.
+    // Require: lower obstacle top edge <= (groundTopY - obstacleMinVisiblePx)
+    const obstacleTopYMaxFromGroundVisibility = groundTopY - obstacleMinVisiblePx + obstacleHalfHeight - verticalGap
+
+    // Keep your original spawn range as a fallback guard.
+    const obstacleTopYMin = Math.max(-120, obstacleTopYMinFromTopVisibility)
+    const obstacleTopYMaxClamped = Math.max(obstacleTopYMin, obstacleTopYMaxFromGroundVisibility)
+    // Lower obstacle center = obstacleTopY + verticalGap
+    // Lower obstacle top edge = (obstacleTopY + verticalGap) - obstacleHalfHeight
+    // Require: lower obstacle top edge <= (groundTopY - obstacleMinVisiblePx)
+    const obstacleTopY = Phaser.Math.Between(obstacleTopYMin, obstacleTopYMaxClamped)
+
+    const gapCenterY = obstacleTopY + (verticalGap / 2)
     const gapLineHeight = verticalGap
     const gap = scene.add.line(GAME_WIDTH, gapCenterY, 0, -gapLineHeight / 2, 0, gapLineHeight / 2)
     gapsGroup.add(gap)
@@ -952,63 +916,48 @@ function makePipes(scene) {
     gap.body.setSize(1, gapLineHeight, true)
     gap.visible = false
 
-    const pipeTop = pipesGroup.create(GAME_WIDTH, pipeTopY, currentPipe.top)
-    pipeTop.body.setSize(pipeTop.width-10, pipeTop.height-8)
+    // Use object pooling: get() reuses inactive sprites instead of creating new ones
+    let upperObstacle = obstaclesGroup.get(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    if (!upperObstacle) {
+        // Fallback: create new sprite only if pool is exhausted
+        upperObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY, currentObstacleSet.top)
+    } else {
+        // Reactivate pooled sprite with new position and texture
+        upperObstacle.setActive(true).setVisible(true)
+        upperObstacle.setPosition(GAME_WIDTH, obstacleTopY)
+        upperObstacle.setTexture(currentObstacleSet.top)
+    }
+    upperObstacle.body.setSize(upperObstacle.width - 20, upperObstacle.height - 12)
+    upperObstacle.body.allowGravity = false
 
-    pipeTop.body.allowGravity = false
-
-    const pipeBottom = pipesGroup.create(GAME_WIDTH, pipeTopY + verticalGap, currentPipe.bottom)
-    pipeBottom.body.setSize(pipeBottom.width-10, pipeBottom.height-8 )
-    pipeBottom.body.allowGravity = false
+    let lowerObstacle = obstaclesGroup.get(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    if (!lowerObstacle) {
+        // Fallback: create new sprite only if pool is exhausted
+        lowerObstacle = obstaclesGroup.create(GAME_WIDTH, obstacleTopY + verticalGap, currentObstacleSet.bottom)
+    } else {
+        // Reactivate pooled sprite with new position and texture
+        lowerObstacle.setActive(true).setVisible(true)
+        lowerObstacle.setPosition(GAME_WIDTH, obstacleTopY + verticalGap)
+        lowerObstacle.setTexture(currentObstacleSet.bottom)
+    }
+    lowerObstacle.body.setSize(lowerObstacle.width - 20, lowerObstacle.height - 12)
+    lowerObstacle.body.allowGravity = false
 }
 
 /**
- * Move the bird in the screen.
+ * Apply upward impulse to the player.
  */
-function moveBird() {
+function propelPlayer() {
     if (gameOver)
         return
 
     if (!gameStarted)
         startGame(game.scene.scenes[0])
 
-    currentVelocity = upwardVelocity
+    currentVelocity = -paperFlightMaxUpSpeed * 0.55
     player.setVelocityY(currentVelocity)
-    player.angle = -20
-    framesMoveUp = 5
-}
-
-/**
- * Get a random bird color.
- * @return {string} Bird color asset.
- */
-function getRandomBird() {
-    switch (Phaser.Math.Between(0, 2)) {
-        case 0:
-            return assets.bird.red
-        case 1:
-            return assets.bird.blue
-        case 2:
-        default:
-            return assets.bird.yellow
-    }
-}
-
-/**
- * Get the animation name from the bird.
- * @param {string} birdColor - Game bird color asset.
- * @return {object} - Bird animation asset.
- */
-function getAnimationBird(birdColor) {
-    switch (birdColor) {
-        case assets.bird.red:
-            return assets.animation.bird.red
-        case assets.bird.blue:
-            return assets.animation.bird.blue
-        case assets.bird.yellow:
-        default:
-            return assets.animation.bird.yellow
-    }
+    player.angle = paperFlightTiltUp
+    framesMoveUp = 0
 }
 
 /**
@@ -1047,8 +996,8 @@ function updateHighScoreDisplay() {
     if (gameStarted && !gameOver && score > runHighScoreBaseline) {
         if (highScoreText) highScoreText.visible = false
         if (highScoreLabelText) highScoreLabelText.visible = false
-        scoreLabelText.setStroke(ORANGE_COLOR)
-        scoreText.setColor(ORANGE_COLOR)
+        scoreLabelText.setStroke(RED_COLOR)
+        scoreText.setColor(RED_COLOR)
         return
     }
 
@@ -1071,8 +1020,7 @@ function restartGame() {
     if (adPlaying) return
     trackAnalyticsEvent('restart_btn_pressed')
     restartEnabled = false
-    pipesGroup.clear(true, true)
-    pipesGroup.clear(true, true)
+    obstaclesGroup.clear(true, true)
     gapsGroup.clear(true, true)
     player.destroy()
     gameOverBanner.visible = false
@@ -1085,9 +1033,9 @@ function restartGame() {
     if (gameOverSound && gameOverSound.isPlaying)
         gameOverSound.stop()
 
-    // reset score text colors 
-        scoreLabelText.setStroke(SCORE_BLUE_COLOR)
-        scoreText.setColor(SCORE_BLUE_COLOR)
+    // reset score text colors
+    scoreText.setColor('#326BFB')
+    scoreLabelText.setColor('#326BFB')
 
     const gameScene = game.scene.scenes[0]
     setRestartPulse(gameScene, false)
@@ -1097,15 +1045,14 @@ function restartGame() {
 }
 
 /**
- * Restart all variable and configurations, show main and recreate the bird.
+ * Restart all variables/configuration, show main UI, and recreate the player.
  * @param {object} scene - Game scene.
  */
 function prepareGame(scene) {
     framesMoveUp = 0
-    pipeTravelDistanceSinceLast = 0
-    nextPipeSpawnDistance = getHorizontalPipeSetGap()
-    isDayTheme = true
-    currentPipe = assets.obstacle.pipe.green
+    obstacleTravelDistanceSinceLast = 0
+    nextObstacleSpawnDistance = getHorizontalObstacleSetGap()
+    currentObstacleSet = assets.obstacles.pencil
     score = 0
     scoreMilestonesTracked = {}
     bestMilestonesTracked = {}
@@ -1119,27 +1066,27 @@ function prepareGame(scene) {
     currentVelocity = minVelocity
     gameOver = false
     restartEnabled = false
-    backgroundDay.visible = isDayTheme
-    backgroundNight.visible = !isDayTheme
-    // Ensure ground starts in day theme as well
     if (groundSprite) {
-        groundSprite.setTexture(assets.scene.ground.day)
+        groundSprite.setTexture(assets.scene.ground)
     }
     // Start screen UI
     setStartScreenVisible(true)
 
-    birdName = getRandomBird()
-    player = scene.physics.add.sprite(100, 250, birdName)
-    player.body.setCircle(12, 6, 2)
+    player = scene.physics.add.sprite(100, 250, assets.character.paperPlane)
+    player.body.setCircle(13, 7, 2)
     player.setCollideWorldBounds(true)
-    player.anims.play(getAnimationBird(birdName).clapWings, true)
+    // player.angle = 15
     player.body.allowGravity = false
+    // Ensure hidden beneath start screen until gameplay begins
+    if (!gameStarted) {
+        player.visible = false
+    }
 
     scoreSound = scene.sound.add('score', { volume: 0.1 })
     gameOverSound = scene.sound.add('gameover', { volume: 0.1 })
 
-    scene.physics.add.collider(player, groundCollider, hitBird, null, scene)
-    scene.physics.add.collider(player, pipesGroup, hitBird, null, scene)
+    scene.physics.add.collider(player, groundCollider, handlePlayerHit, null, scene)
+    scene.physics.add.collider(player, obstaclesGroup, handlePlayerHit, null, scene)
 
     scene.physics.add.overlap(player, gapsGroup, updateScore, null, scene)
 
@@ -1151,7 +1098,7 @@ function prepareGame(scene) {
 }
 
 /**
- * Start the game, create pipes and hide the main menu.
+ * Start gameplay, create obstacles, and hide the main menu.
  * @param {object} scene - Game scene.
  */
 function startGame(scene) {
@@ -1163,25 +1110,25 @@ function startGame(scene) {
     }
     setStartScreenVisible(false)
 
-    // Start flapps background loop when gameplay begins
-    if (!flappsBackground) {
-        flappsBackground = scene.sound.add('flappsBackground', {
+    // Start gameplay loop sound when gameplay begins
+    if (!gameplayLoopSound) {
+        gameplayLoopSound = scene.sound.add('gameplayLoopSound', {
             volume: 0.4,
             loop: true
         })
     }
     try {
-        flappsBackground.play()
+        gameplayLoopSound.play()
     } catch (_) {}
 
-    moveBird() // give bird an initial jump
+    propelPlayer() // give player an initial upward impulse
 
-    player.body.allowGravity = true
+    player.body.allowGravity = false
 
     // Display initial score (0) on top left and high score on top right
     updateScoreboard()
     updateHighScoreDisplay()
 
-    makePipes(scene)
+    makeObstacles(scene)
 }
 

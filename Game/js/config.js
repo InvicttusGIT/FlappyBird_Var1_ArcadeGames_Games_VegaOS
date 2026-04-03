@@ -26,6 +26,9 @@ function createConfigurations(preload, create, update) {
         },
         physics: {
             default: 'arcade',
+            // arcade:{
+            //     debug: true,
+            // }
         },
         scene: {
             preload,
@@ -36,43 +39,34 @@ function createConfigurations(preload, create, update) {
 }
 
 const assets = {
-    bird: {
-        red: 'bird-red',
-        yellow: 'bird-yellow',
-        blue: 'bird-blue'
+    character: {
+        paperPlane: 'paper-plane'
     },
-    obstacle: {
-        pipe: {
-            green: {
-                top: 'pipe-green-top',
-                bottom: 'pipe-green-bottom'
-            },
-            red: {
-                top: 'pipe-red-top',
-                bottom: 'pipe-red-bo'
-            }
+    obstacles: {
+        pencil: {
+            top: 'pencil-top',
+            bottom: 'pencil-bottom'
+        },
+        ruler: {
+            top: 'ruler-top',
+            bottom: 'ruler-bottom'
         }
     },
     scene: {
         width: GAME_CENTER_X,
-        background: {
-            day: 'background-day',
-            night: 'background-night'
-        },
-        ground: {
-            day: 'ground-day',
-            night: 'ground-night'
-        },
-        gameOver: 'game-over',
-        restart: 'restart-button',
+        background: 'background-main',
+        ground: 'ground-main',
+        startBackground: 'background-start-screen',
     },
     ui: {
-        title: 'ui-title',
-        playButton: 'ui-play-button',
-        musicOn: 'ui-music-on',
-        musicOff: 'ui-music-off',
+        letsFlyButton: 'ui-lets-fly-button',
+        restartButton: 'ui-restart-button',
+        soundOnFocused: 'ui-sound-on-focused',
+        soundOnUnfocused: 'ui-sound-on-unfocused',
+        soundOffUnfocused: 'ui-sound-off-unfocused',
+        soundOffFocused: 'ui-sound-off-focused',
         exitPopupBg: 'ui-exit-popup-bg',
-        exitBirds: 'ui-exit-birds',
+        exitPlaneIllustration: 'ui-exit-plane-illustration',
         exitHeadingImage: 'ui-exit-heading-image',
         exitLeaveButton: 'ui-exit-leave-button',
         exitStayButton: 'ui-exit-stay-button',
@@ -104,25 +98,5 @@ const assets = {
         number7: 'number7',
         number8: 'number8',
         number9: 'number9'
-    },
-    animation: {
-        bird: {
-            red: {
-                clapWings: 'red-clap-wings',
-                stop: 'red-stop'
-            },
-            blue: {
-                clapWings: 'blue-clap-wings',
-                stop: 'blue-stop'
-            },
-            yellow: {
-                clapWings: 'yellow-clap-wings',
-                stop: 'yellow-stop'
-            }
-        },
-        ground: {
-            moving: 'moving-ground',
-            stop: 'stop-ground'
-        }
     }
 }

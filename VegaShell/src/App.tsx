@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"; 
-import { BackHandler, StyleSheet, Text, View } from "react-native";
+import { AppState, BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebView } from "@amazon-devices/webview";
 import {
   useHideSplashScreenCallback,
@@ -10,7 +10,7 @@ import { sendHighScoreToWebView, handleHighScoreMessage } from "./highScoreBridg
 import { maybeHandleIapMessage, syncEntitlementToWebView } from "./iapBridge";
 import { initializeFirebaseAnalytics, trackNativeAnalyticsEvent } from "./analytics/analyticsBridge";
 
-const DEVICE_ID_KEY = "flappybird_device_uuid";
+const DEVICE_ID_KEY = "PaperFlight_device_uuid";
 function generateDeviceId(): string {
   // Generate a pseudo-unique ID: 3 random digits + current timestamp (ms)
   const rand3 = () => Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -73,6 +73,44 @@ export const App = () => {
     }, 20000);
     return () => clearTimeout(timeout);
   }, [hideSplashScreenCallback]);
+
+  // Destroy Phaser game instance when app goes to background to release GPU resources
+  // This prevents the 146MB DRM memory leak that triggers LowMemoryKiller
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // Destroy Phaser game to release WebGL context and all GPU textures
+        if (webRef.current && typeof webRef.current.injectJavaScript === 'function') {
+          webRef.current.injectJavaScript(`
+            (function() {
+              try {
+                if (window.game && typeof window.game.destroy === 'function') {
+                  console.log('[Vega] Destroying Phaser game on background');
+                  // removeCanvas=true releases WebGL context; noReturn=false allows restart
+                  window.game.destroy(true, false);
+                  window.game = null;
+                }
+              } catch(e) {
+                console.error('[Vega] Failed to destroy game:', e);
+              }
+            })();
+          `);
+        }
+      } else if (nextAppState === 'active') {
+        // When returning to foreground, reload the page to recreate the game
+        // This ensures a clean state after GPU resources were released
+        if (webRef.current && typeof webRef.current.reload === 'function') {
+          try {
+            webRef.current.reload();
+          } catch (e) {
+            console.error('[Vega] Failed to reload WebView:', e);
+          }
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const handleWebViewMessage = useCallback(async (event: any) => {
     // Avoid React synthetic event pooling warnings by capturing data synchronously.
@@ -178,15 +216,43 @@ export const App = () => {
     sendHighScoreToWebView(webRef);
   }, [hideSplashScreenCallback]);
 
+  const handleRetry = useCallback(() => {
+    // Reset failure state and reload
+    setWebFailed(false);
+    webLoadedRef.current = false;
+    
+    // Reload the WebView if it exists
+    if (webRef.current && typeof webRef.current.reload === 'function') {
+      try {
+        webRef.current.reload();
+      } catch (e) {
+        console.error('[Vega] Failed to reload WebView:', e);
+      }
+    }
+    
+    // Track retry attempt
+    void trackNativeAnalyticsEvent({
+      name: "web_load_retry",
+      params: {},
+    });
+  }, []);
+
 
   return (
     <View style={styles.container}>
       {webFailed ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Flappy Wings is unavailable</Text>
+          <Text style={styles.errorTitle}>Paper Flight is unavailable</Text>
           <Text style={styles.errorSubtitle}>
             Please check your connection or try again later.
           </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={handleRetry}
+            hasTVPreferredFocus={true}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <WebView
@@ -198,7 +264,7 @@ export const App = () => {
           mediaPlaybackRequiresUserAction={false}
           allowsDefaultMediaControl={true}
           source={{
-            uri: "https://flappywings.b-cdn.net/",
+            uri: "https://c2npfk3m-5500.asse.devtunnels.ms/"
           }}
           javaScriptEnabled={true}
           onHttpError={() => {setWebFailed(true); hideSplashScreenCallback();}}
@@ -246,5 +312,20 @@ const styles = StyleSheet.create({
     color: "#cccccc",
     fontSize: 14,
     textAlign: "center",
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#326BFB",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginTop: 16,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

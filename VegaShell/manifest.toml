@@ -1,7 +1,7 @@
 schema-version = 1
 
 [package]
-title = "Flappy Wings"
+title = "Paper Flight"
 version = "1.0.0"
 id = "com.invicttusx.flappywings_v1_ag_game_vega"
 icon = "@image/appIcon.png"
