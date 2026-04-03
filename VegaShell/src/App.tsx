@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"; 
-import { AppState, BackHandler, StyleSheet, Text, View } from "react-native";
+import { AppState, BackHandler, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebView } from "@amazon-devices/webview";
 import {
   useHideSplashScreenCallback,
@@ -216,6 +216,27 @@ export const App = () => {
     sendHighScoreToWebView(webRef);
   }, [hideSplashScreenCallback]);
 
+  const handleRetry = useCallback(() => {
+    // Reset failure state and reload
+    setWebFailed(false);
+    webLoadedRef.current = false;
+    
+    // Reload the WebView if it exists
+    if (webRef.current && typeof webRef.current.reload === 'function') {
+      try {
+        webRef.current.reload();
+      } catch (e) {
+        console.error('[Vega] Failed to reload WebView:', e);
+      }
+    }
+    
+    // Track retry attempt
+    void trackNativeAnalyticsEvent({
+      name: "web_load_retry",
+      params: {},
+    });
+  }, []);
+
 
   return (
     <View style={styles.container}>
@@ -225,6 +246,13 @@ export const App = () => {
           <Text style={styles.errorSubtitle}>
             Please check your connection or try again later.
           </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={handleRetry}
+            hasTVPreferredFocus={true}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <WebView
@@ -284,5 +312,20 @@ const styles = StyleSheet.create({
     color: "#cccccc",
     fontSize: 14,
     textAlign: "center",
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#326BFB",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginTop: 16,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
