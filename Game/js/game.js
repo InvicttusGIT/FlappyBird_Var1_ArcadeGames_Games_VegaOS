@@ -417,7 +417,7 @@ function createStartScreenUI(scene, scoreTextStyle) {
     playHintText = scene.add.text(
         0,
         115,
-        'PRESS "OK" TO FLY',
+        'HOLD "OK" TO FLY',
         {
             fontFamily: 'shantell',
             fontSize: '22px',
